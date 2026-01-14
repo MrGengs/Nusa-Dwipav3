@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users
+    match /users/{uid} {
+      allow read: if true; // Untuk login-by-username
+      allow create, update, delete: if request.auth != null && request.auth.uid == uid;
+    }
+    
+    // Rooms
+    match /rooms/{code} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+      allow update: if request.auth != null && (
+        resource.data.ownerId == request.auth.uid || 
+        request.resource.data.members[request.auth.uid] == true
+      );
+      allow delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
+    }
+    
+    // Sessions
+    match /sessions/{sessionId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Leaderboard
+    match /leaderboard/{leaderboardId} {
+      allow read: if true; // Public read access
+      allow create: if request.auth != null; // Only authenticated users can create
+      allow update, delete: if false; // No updates or deletes allowed
+    }
+  }
+}

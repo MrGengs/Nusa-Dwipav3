@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Nusa-Dwipa - Lobby</title>
+    <meta name="description" content="Lobby - Menunggu permainan dimulai">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/assets/image/tittle.png" />
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+            overflow: hidden;
+            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 50%, #1d4ed8 100%);
+            width: 100%;
+            height: 100vh;
+        }
+        
+        /* Countdown Container */
+        #countdown-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            color: white;
+            text-align: center;
+        }
+        
+        #countdown-loading-text {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: white;
+        }
+        
+        #countdown-timer {
+            font-size: 120px;
+            font-weight: 900;
+            margin: 20px 0;
+            text-shadow: 0 4px 20px rgba(255, 215, 0, 0.5);
+            color: #FFD700;
+        }
+        
+        #countdown-text {
+            font-size: 18px;
+            font-weight: 500;
+            margin-top: 20px;
+            color: white;
+        }
+        
+        /* Player count in top-right */
+        #player-count {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 10001;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(5, 150, 105, 0.9));
+            padding: 12px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            pointer-events: none;
+        }
+        
+        #player-count-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 4px;
+        }
+        
+        #player-count-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: white;
+            line-height: 1;
+        }
+        
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            #countdown-loading-text {
+                font-size: 18px;
+                margin-bottom: 15px;
+            }
+            
+            #countdown-timer {
+                font-size: 80px;
+            }
+            
+            #countdown-text {
+                font-size: 14px;
+            }
+            
+            #player-count {
+                top: 10px;
+                right: 10px;
+                padding: 10px 16px;
+            }
+            
+            #player-count-label {
+                font-size: 11px;
+            }
+            
+            #player-count-number {
+                font-size: 20px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            #countdown-loading-text {
+                font-size: 16px;
+                margin-bottom: 12px;
+            }
+            
+            #countdown-timer {
+                font-size: 60px;
+            }
+            
+            #countdown-text {
+                font-size: 12px;
+            }
+            
+            #player-count {
+                top: 8px;
+                right: 8px;
+                padding: 8px 12px;
+            }
+            
+            #player-count-label {
+                font-size: 10px;
+            }
+            
+            #player-count-number {
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Player Count in Top-Right -->
+    <div id="player-count">
+        <div id="player-count-label">Pemain</div>
+        <div id="player-count-number">1</div>
+    </div>
+
+    <!-- Countdown Container -->
+    <div id="countdown-container">
+        <div id="countdown-loading-text">Memuat lobby...</div>
+        <div id="countdown-timer">15</div>
+        <div id="countdown-text">Permainan akan dimulai sebentar lagi</div>
+    </div>
+
+    <script>
+        // Get room code and mode from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomCode = urlParams.get('room');
+        const mode = urlParams.get('mode');
+
+        // Check if solo mode
+        const isSoloMode = mode === 'solo';
+
+        if (!isSoloMode && !roomCode) {
+            alert('Kode ruangan tidak ditemukan. Kembali ke halaman pemilihan ruangan.');
+            window.location.href = 'room.html';
+        }
+
+        // Store room code in localStorage (if not solo mode)
+        if (!isSoloMode && roomCode) {
+            localStorage.setItem('activeRoomCode', roomCode);
+        }
+
+        let countdown = 15;
+        let playerCount = 1; // Default, will be updated if we have room info
+        const countdownTimer = document.getElementById('countdown-timer');
+        const countdownLoadingText = document.getElementById('countdown-loading-text');
+        const countdownText = document.getElementById('countdown-text');
+        const playerCountNumber = document.getElementById('player-count-number');
+
+        // Update player count (you can integrate with your room system)
+        function updatePlayerCount(count) {
+            playerCount = count;
+            if (playerCountNumber) {
+                playerCountNumber.textContent = count;
+            }
+        }
+
+        // Update UI for solo mode
+        if (isSoloMode) {
+            if (countdownLoadingText) {
+                countdownLoadingText.textContent = 'Memuat mode solo...';
+            }
+            if (countdownText) {
+                countdownText.textContent = 'Mode solo akan dimulai sebentar lagi';
+            }
+            // Hide player count for solo mode
+            const playerCountEl = document.getElementById('player-count');
+            if (playerCountEl) {
+                playerCountEl.style.display = 'none';
+            }
+        }
+
+        // Simulate player count update (replace with actual room system)
+        // For now, we'll just show 1 player
+        updatePlayerCount(1);
+
+        // Start countdown
+        let countdownStarted = false;
+        function startCountdown() {
+            if (countdownStarted) return;
+            countdownStarted = true;
+
+            if (countdownLoadingText) {
+                countdownLoadingText.style.display = 'none';
+            }
+            if (countdownText) {
+                countdownText.style.display = 'block';
+            }
+
+            const interval = setInterval(() => {
+                countdown--;
+                if (countdownTimer) {
+                    countdownTimer.textContent = countdown;
+                }
+
+                if (countdown <= 0) {
+                    clearInterval(interval);
+                    // Redirect to game.html with appropriate parameters
+                    if (isSoloMode) {
+                        window.location.href = `game.html?mode=solo`;
+                    } else {
+                        window.location.href = `game.html?room=${roomCode}`;
+                    }
+                }
+            }, 1000);
+        }
+
+        // Start countdown after 1 second
+        setTimeout(() => {
+            startCountdown();
+        }, 1000);
+    </script>
+</body>
+</html>

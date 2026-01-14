@@ -1,0 +1,37 @@
+{
+  "rules": {
+    ".read": true,
+    ".write": true,
+    "rooms": {
+      "$roomId": {
+        ".read": true,
+        ".write": true,
+        "players": {
+          ".read": true,
+          "$uid": {
+            ".write": true
+          }
+        },
+        "squads": {
+          "$squadId": {
+            ".read": true,
+            ".write": true,
+            "members": {
+              "$uid": {
+                ".write": true
+              }
+            }
+          }
+        },
+        "sessions": {
+          "$uid": {
+            ".read": true,
+            ".write": true
+          }
+        },
+        ".indexOn": ["status", "startedAt"]
+      }
+    }
+  }
+}
+

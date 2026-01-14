@@ -1,0 +1,6 @@
+{
+  "rules": {
+    "unknownAtRules": "ignore",
+    "unknownProperties": "ignore"
+  }
+}

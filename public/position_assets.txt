@@ -1,0 +1,984 @@
+
+      <a-entity id="scene">
+        <!-- Dunia dasar menggunakan world.glb sebagai base environment -->
+        <!-- Class environmentGround dan environmentDressing digunakan untuk collision/navmesh constraint -->
+        <!-- Scale diperbesar untuk membuat dunia lebih luas -->
+        <!-- Model dunia utama dengan collision - OPTIMIZED -->
+        <a-entity
+          gltf-model="url(/assets/world.glb)"
+          class="environmentGround environmentDressing"
+          scale="4 4 4"
+          shadow="receive:true"
+          nav-mesh
+          static-body="shape: box; mass: 0"
+        ></a-entity>
+
+        <!-- Model koridor dengan collision - OPTIMIZED -->
+        <a-entity
+          gltf-model="url(/assets/koridor2.glb)"
+          position="58 -0.1 0"
+          scale="1 1 1"
+          rotation="0 90 0"
+          class="environmentGround environmentDressing"
+          shadow="receive:true"
+          nav-mesh
+          static-body="shape: box; mass: 0"
+        ></a-entity>
+
+        <!-- Multiplayer lobby staging area -->
+        <a-entity
+          id="multiplayer-lobby"
+          gltf-model="url(/assets/lobby.glb)"
+          position="120 0 120"
+          scale="1 1 1"
+          rotation="0 135 0"
+          class="environmentGround environmentDressing lobby-area"
+          shadow="receive:true"
+          nav-mesh
+          static-body="shape: box; mass: 0"
+        ></a-entity>
+        
+        <!-- Lobby boundary walls (invisible) to prevent players from leaving -->
+        <!-- Front wall -->
+        <a-box
+          position="120 5 135"
+          width="30"
+          height="10"
+          depth="1"
+          material="opacity: 0; transparent: true"
+          static-body="shape: box; mass: 0"
+          class="lobby-boundary"
+        ></a-box>
+        <!-- Back wall -->
+        <a-box
+          position="120 5 105"
+          width="30"
+          height="10"
+          depth="1"
+          material="opacity: 0; transparent: true"
+          static-body="shape: box; mass: 0"
+          class="lobby-boundary"
+        ></a-box>
+        <!-- Left wall -->
+        <a-box
+          position="105 5 120"
+          width="1"
+          height="10"
+          depth="30"
+          material="opacity: 0; transparent: true"
+          static-body="shape: box; mass: 0"
+          class="lobby-boundary"
+        ></a-box>
+        <!-- Right wall -->
+        <a-box
+          position="135 5 120"
+          width="1"
+          height="10"
+          depth="30"
+          material="opacity: 0; transparent: true"
+          static-body="shape: box; mass: 0"
+          class="lobby-boundary"
+        ></a-box>
+
+        <!-- ===== RUMAH ADAT NUSANTARA ===== -->
+        <!-- Rumah-rumah ditata di sepanjang sisi atas dan bawah koridor horizontal -->
+        <!-- Setiap rumah memiliki collision agar player tidak bisa menembus -->
+
+        <!-- SISI ATAS KORIDOR (Z negatif) -->
+
+        <!-- Rumah Gadang - Sumatra Barat (sebelah kiri Honai) -->
+        <a-entity
+          gltf-model="url(/assets/rumah_adat/rumah_gadang_sumbar.glb)"
+          position="-75 -0.4 9"
+          scale="1 1 1"
+          rotation="0 0 0"
+          class="environmentGround environmentDressing collidable"
+          shadow="cast:false;receive:true"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+
+        <!-- Portal Masuk Rumah Gadang -->
+        <a-entity
+          position="-74 -0.40 0.69"
+          teleport-portal="targetPosition: -75 1.72 5.29; triggerDistance: 1.2; portalType: entrance"
+        ></a-entity>
+
+        <!-- Portal Keluar Rumah Gadang -->
+        <a-entity
+          position="-75 1.72 4.40"
+          teleport-portal="targetPosition: -69.32 -0.10 -1.18; triggerDistance: 1.2; portalType: exit"
+        ></a-entity>
+
+        <!-- Display Baju Adat Bundo Kanduang -->
+        <a-entity 
+          position="-73.23 4 10"
+          rotation="0 200 0"
+          collectible-item="
+            itemId: baju-bundo-kanduang-sumbar;
+            itemName: Baju Bundo Kanduang dari Sumatra Barat;
+            itemDescription: Baju adat Bundo Kanduang adalah pakaian kebesaran perempuan Minangkabau yang melambangkan kewibawaan pemimpin adat dengan suntiang tinggi dan kain songket penuh filosofi;
+            itemImage: /assets/baju_adat/basumbar.png;
+            itemCategory: costume;
+            collectDistance: 4;
+          "
+          static-body="shape: box"
+        >
+          <a-plane 
+            src="#baju-sumbar"
+            width="1.6" 
+            height="2.1" 
+            position="0 -3 0"
+            material="transparent:true; alphaTest:0.5; side:double; shader:flat; emissive:#ffffff; emissiveIntensity:0.3"
+          ></a-plane>
+          <a-ring
+            color="#FFD700"
+            radius-inner="1.0"
+            radius-outer="1.2"
+            position="0 -4 0"
+            rotation="-90 0 0"
+            material="shader:flat; transparent:true; opacity:1; emissive:#FFD700; emissiveIntensity:0.8"
+            animation="property: scale; from: 0.95 0.95 0.95; to: 1.15 1.15 1.15; to: 0.95 0.95 0.95; dur: 2000; dir: alternate; easing: easeInOutSine; loop: true"
+          ></a-ring>
+        </a-entity>
+
+        <!-- Rumah Honai - Papua (atas kiri) - OPTIMIZED -->
+        <a-entity
+          gltf-model="url(/assets/rumah_adat/rumah_honai_papua.glb)"
+          position="-53 -0.39 -15"
+          scale="1 1 1"
+          rotation="0 90 0"
+          class="environmentGround environmentDressing collidable"
+          shadow="cast:false;receive:true"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+
+        <!-- Portal Masuk Rumah Honai Papua (di depan rumah) -->
+        <a-entity
+          position="-57.2 -0.3 -24.2"
+          teleport-portal="targetPosition: -58.5 -0.3 -25; triggerDistance: 0.5; portalType: entrance"
+        ></a-entity>
+
+        <!-- Portal Keluar Rumah Honai Papua (di dalam rumah) -->
+        <a-entity
+          position="-57.2 -0.3 -25"
+          teleport-portal="targetPosition: -52 -0.3 -15; triggerDistance: 0.5; portalType: exit"
+        ></a-entity>
+
+        <!-- DISPLAY BAJU ADAT PAPUA - di dalam rumah Honai Papua -->
+        <!-- Display baju adat dengan collectible component -->
+        <a-entity 
+          position="-57.7 3.8 -28.5"
+          rotation="0 270 0"
+          collectible-item="
+            itemId: baju-koteka-papua;
+            itemName: Pakaian Koteka dari Papua;
+            itemDescription: Pakaian Adat Koteka dan Rok Rumbai adalah busana tradisional yang identik dengan masyarakat adat di wilayah Pegunungan Tengah Papua (seperti Suku Dani, Lani, dan Yali), terkenal karena kesederhanaan bahan alamnya dan sarat akan makna status sosial.;
+            itemImage: /assets/baju_adat/bapapua.png;
+            itemCategory: costume;
+            collectDistance: 4;
+          "
+          static-body="shape: box"
+        >
+          <!-- Gambar baju adat PNG dengan background transparan -->
+          <a-plane 
+            src="#baju-papua"
+            width="1.5" 
+            height="2" 
+            position="0 -3 0"
+            material="transparent:true; alphaTest:0.5; side:double; shader:flat; emissive:#ffffff; emissiveIntensity:0.3"
+          ></a-plane>
+          
+          <!-- Indicator circle untuk collection area - selalu tampil -->
+          <!-- Ring dengan efek pulse membesar-kecil terus menerus (bolak-balik) -->
+          <a-ring
+            color="#FFD700"
+            radius-inner="1.0"
+            radius-outer="1.2"
+            position="0 -4 0"
+            rotation="-90 0 0"
+            material="shader:flat; transparent:true; opacity:1; emissive:#FFD700; emissiveIntensity:0.8"
+            animation="property: scale; from: 0.95 0.95 0.95; to: 1.15 1.15 1.15; to: 0.95 0.95 0.95; dur: 2000; dir: alternate; easing: easeInOutSine; loop: true"
+          ></a-ring>
+        </a-entity>
+
+        <a-entity
+          gltf-model="url(/assets/rumah_adat/rumah_honai_papua.glb)"
+          position="-47 -0.39 -21"
+          scale="1 1 1"
+          rotation="0 90 0"
+          class="environmentGround environmentDressing collidable"
+          shadow="cast:false;receive:true"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+        <a-entity
+          gltf-model="url(/assets/rumah_adat/rumah_honai_papua.glb)"
+          position="-40 -0.39 -15"
+          scale="1 1 1"
+          rotation="0 90 0"
+          class="environmentGround environmentDressing collidable"
+          shadow="cast:false;receive:true"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+
+        <!-- Rumah Krong - Aceh (atas tengah) -->
+        <a-entity
+          gltf-model="url(/assets/rumah_adat/rumah_krong_aceh.glb)"
+          position="-40 -0.5 13.9"
+          scale="0.3 0.3 0.3"
+          rotation="0 90 0"
+          class="environmentGround environmentDressing collidable"
+          shadow="cast:false;receive:true"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+
+        <!-- Portal Masuk Rumah Krong Aceh (di depan rumah) -->
+        <a-entity
+          position="-47.5 0 0"
+          teleport-portal="targetPosition: -47 2.5 45; triggerDistance: 1.5; portalType: entrance"
+        ></a-entity>
+
+        <!-- Portal Keluar Rumah Krong Aceh (di dalam rumah) -->
+        <a-entity
+          position="-47 1 33"
+          teleport-portal="targetPosition: -47.5 0 -2; triggerDistance: 1.5; portalType: exit"
+        ></a-entity>
+
+        <!-- DISPLAY PAKAIAN ADAT ULEE BALANG - di dalam rumah Krong Aceh -->
+        <!-- Display baju adat dengan collectible component -->
+        <a-entity 
+          position="-47 4.7 45"
+          rotation="0 270 0"
+          collectible-item="
+            itemId: baju-ulee-balang-aceh;
+            itemName: Pakaian Ulee Balang dari Aceh;
+            itemDescription: Pakaian Adat Ulee Balang adalah busana tradisional khas Aceh yang melambangkan kebesaran, kemuliaan, dan status sosial tinggi, yang pada masa kesultanan hanya dikenakan oleh golongan bangsawan (Ulee Balang). Kini, pakaian ini populer sebagai busana pernikahan adat.;
+            itemImage: /assets/baju_adat/baaceh.png;
+            itemCategory: costume;
+            collectDistance: 4;
+          "
+          static-body="shape: box"
+        >
+          <!-- Gambar baju adat PNG dengan background transparan -->
+          <a-plane 
+            src="#baju-aceh"
+            width="1.5" 
+            height="2" 
+            position="0 -3 0"
+            material="transparent:true; alphaTest:0.5; side:double; shader:flat; emissive:#ffffff; emissiveIntensity:0.3"
+          ></a-plane>
+          
+          <!-- Indicator circle untuk collection area - selalu tampil -->
+          <!-- Ring dengan efek pulse membesar-kecil terus menerus (bolak-balik) -->
+          <a-ring
+            color="#FFD700"
+            radius-inner="1.0"
+            radius-outer="1.2"
+            position="0 -4 0"
+            rotation="-90 0 0"
+            material="shader:flat; transparent:true; opacity:1; emissive:#FFD700; emissiveIntensity:0.8"
+            animation="property: scale; from: 0.95 0.95 0.95; to: 1.15 1.15 1.15; to: 0.95 0.95 0.95; dur: 2000; dir: alternate; easing: easeInOutSine; loop: true"
+          ></a-ring>
+        </a-entity>
+
+        <!-- Rumah Batak - Sumatra Utara (sebelah kanan Krong Aceh) -->
+        <a-entity
+          gltf-model="url(/assets/rumah_adat/rumah_batak_sumut.glb)"
+          position="-80 -0.40 -18"
+          scale="1 1 1"
+          rotation="0 0 0"
+          class="environmentGround environmentDressing collidable"
+          shadow="cast:false;receive:true"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+
+        <!-- Portal Masuk Rumah Batak -->
+        <a-entity
+          position="-77.51 -0.40 -17.42"
+          teleport-portal="targetPosition: -77.51 1.7 -21; triggerDistance: 1; portalType: entrance"
+        ></a-entity>
+
+        <!-- Portal Keluar Rumah Batak -->
+        <a-entity
+          position="-77.51 1.7 -20"
+          teleport-portal="targetPosition: -80 -0.10 -15; triggerDistance: 1; portalType: exit"
+        ></a-entity>
+
+        <!-- Display Baju Adat Batak -->
+        <a-entity 
+          position="-77.38 5.4 -27"
+          rotation="0 250 0"
+          collectible-item="
+            itemId: baju-ulos-batak-sumut;
+            itemName: Pakaian Ulos Batak Sumatra Utara;
+            itemDescription: Busana adat Batak dipadukan dengan kain Ulos sebagai simbol restu dan kehangatan yang wajib ada di setiap upacara adat penting masyarakat Sumatra Utara;
+            itemImage: /assets/baju_adat/babatak.png;
+            itemCategory: costume;
+            collectDistance: 4;
+          "
+          static-body="shape: box"
+        >
+          <a-plane 
+            src="#baju-batak"
+            width="1.6" 
+            height="2.1" 
+            position="0 -3 0"
+            material="transparent:true; alphaTest:0.5; side:double; shader:flat; emissive:#ffffff; emissiveIntensity:0.3"
+          ></a-plane>
+          <a-ring
+            color="#FFD700"
+            radius-inner="1.0"
+            radius-outer="1.2"
+            position="0 -4 0"
+            rotation="-90 0 0"
+            material="shader:flat; transparent:true; opacity:1; emissive:#FFD700; emissiveIntensity:0.8"
+            animation="property: scale; from: 0.95 0.95 0.95; to: 1.15 1.15 1.15; to: 0.95 0.95 0.95; dur: 2000; dir: alternate; easing: easeInOutSine; loop: true"
+          ></a-ring>
+        </a-entity>
+
+        <!-- Rumah Lampung - Sumatra (atas kanan) -->
+        <a-entity
+          gltf-model="url(/assets/rumah_adat/rumah_lampung_sumatra.glb)"
+          position="-25 -0.39 -17"
+          scale="2 2 2"
+          rotation="0 0 0"
+          class="environmentGround environmentDressing collidable"
+          shadow="cast:false;receive:true"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+
+        <!-- Portal Masuk Rumah Lampung Sumatra (di depan rumah) -->
+        <a-entity
+          position="-16 0 -17"
+          teleport-portal="targetPosition: -21 3 -26; triggerDistance: 1.5; portalType: entrance"
+        ></a-entity>
+
+        <!-- Portal Keluar Rumah Lampung Sumatra (di dalam rumah) -->
+        <a-entity
+          position="-21 3.5 -23.5"
+          teleport-portal="targetPosition: -25 0 -15; triggerDistance: 1.5; portalType: exit"
+        ></a-entity>
+
+        <!-- DISPLAY PAKAIAN ADAT PEPADUN - di dalam rumah Lampung Sumatra -->
+        <!-- Display baju adat dengan collectible component -->
+        <a-entity 
+          position="-21 7.5 -37"
+          rotation="0 180 0"
+          collectible-item="
+            itemId: baju-pepadun-lampung;
+            itemName: Pakaian Pepadun dari Sumatra;
+            itemDescription: Pakaian Adat Pepadun adalah busana kebesaran dari masyarakat Lampung yang menganut sistem adat Pepadun (dataran tinggi/pedalaman). Pakaian ini secara umum berwarna putih dan emas, melambangkan kesucian dan kemuliaan, serta sering dikenakan sebagai busana pengantin.;
+            itemImage: /assets/baju_adat/basumatra.png;
+            itemCategory: costume;
+            collectDistance: 4;
+          "
+          static-body="shape: box"
+        >
+          <!-- Gambar baju adat PNG dengan background transparan -->
+          <a-plane 
+            src="#baju-lampung"
+            width="1.5" 
+            height="2" 
+            position="0 -3 0"
+            material="transparent:true; alphaTest:0.5; side:double; shader:flat; emissive:#ffffff; emissiveIntensity:0.3"
+          ></a-plane>
+          
+          <!-- Indicator circle untuk collection area - selalu tampil -->
+          <!-- Ring dengan efek pulse membesar-kecil terus menerus (bolak-balik) -->
+          <a-ring
+            color="#FFD700"
+            radius-inner="1.0"
+            radius-outer="1.2"
+            position="0 -4 0"
+            rotation="-90 0 0"
+            material="shader:flat; transparent:true; opacity:1; emissive:#FFD700; emissiveIntensity:0.8"
+            animation="property: scale; from: 0.95 0.95 0.95; to: 1.15 1.15 1.15; to: 0.95 0.95 0.95; dur: 2000; dir: alternate; easing: easeInOutSine; loop: true"
+          ></a-ring>
+        </a-entity>
+
+        <!-- SISI BAWAH KORIDOR (Z positif) -->
+
+        <!-- Rumah Dayak - Kalimantan (bawah kiri) -->
+        <a-entity
+          gltf-model="url(/assets/rumah_adat/rumah_dayak_kalimantan.glb)"
+          position="35 -1 1"
+          scale="1 1 1"
+          rotation="0 180 0"
+          class="environmentGround environmentDressing collidable"
+          shadow="cast:false;receive:true"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+
+        <!-- Portal Masuk Rumah Dayak Kalimantan (di depan rumah) -->
+        <a-entity
+          position="25.37 -0.10 -16.38"
+          teleport-portal="targetPosition: 12 3 -36; triggerDistance: 1; portalType: entrance"
+        ></a-entity>
+
+        <!-- Portal Keluar Rumah Dayak Kalimantan (di dalam rumah) -->
+        <a-entity
+          position="35 7.5 -36"
+          teleport-portal="targetPosition: 18.2 -0.40 -17.43  ; triggerDistance: 1; portalType: exit"
+        ></a-entity>
+
+        <!-- DISPLAY BAJU ADAT DAYAK - di dalam rumah Dayak Kalimantan -->
+        <!-- Display baju adat dengan collectible component -->
+        <a-entity 
+          position="45 7 -36"
+          rotation="0 180 0"
+          collectible-item="
+            itemId: baju-dayak-kalimantan;
+            itemName: Pakaian Sapei Sapaq dari Kalimantan;
+            itemDescription: Pakaian Sapei Sapaq dan Ta'a adalah pasangan busana adat tradisional dari Suku Dayak, khususnya sub-Suku Dayak Kenyah yang mendiami wilayah Kalimantan Timur. Pakaian ini merupakan busana kebesaran yang dikenakan untuk upacara adat penting atau tarian penyambutan.;
+            itemImage: /assets/baju_adat/badayak.png;
+            itemCategory: costume;
+            collectDistance: 4;
+          "
+          static-body="shape: box"
+        >
+          <!-- Gambar baju adat PNG dengan background transparan -->
+          <a-plane 
+            src="#baju-dayak"
+            width="1.5" 
+            height="2" 
+            position="0 -3 0"
+            material="transparent:true; alphaTest:0.5; side:double; shader:flat; emissive:#ffffff; emissiveIntensity:0.3"
+          ></a-plane>
+          
+          <!-- Indicator circle untuk collection area - selalu tampil -->
+          <!-- Ring dengan efek pulse membesar-kecil terus menerus (bolak-balik) -->
+          <a-ring
+            color="#FFD700"
+            radius-inner="1.0"
+            radius-outer="1.2"
+            position="0 -4 0"
+            rotation="-90 0 0"
+            material="shader:flat; transparent:true; opacity:1; emissive:#FFD700; emissiveIntensity:0.8"
+            animation="property: scale; from: 0.95 0.95 0.95; to: 1.15 1.15 1.15; to: 0.95 0.95 0.95; dur: 2000; dir: alternate; easing: easeInOutSine; loop: true"
+          ></a-ring>
+        </a-entity>
+
+        <!-- Artefak Pelinggih Surya - Bali (kanan rumah Dayak) -->
+        <a-entity
+          gltf-model="url(/assets/rumah_adat/artefak_pelinggih_surya_bali.glb)"
+          position="65 -0.4 1.5"
+          scale="1 1 1"
+          rotation="0 200 0"
+          class="environmentGround environmentDressing collidable"
+          shadow="cast:false;receive:true"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+
+        <a-entity 
+          position="67.66 -0.40 1.54"
+          rotation="0 200 0"
+          collectible-item="
+            itemId: baju-payas-agung-bali;
+            itemName: Payas Agung Bali;
+            itemDescription: Payas Agung adalah busana adat kebesaran Bali yang dipakai dalam upacara sakral dan pernikahan dengan dominasi warna emas dan hiasan ukiran rumit;
+            itemImage: /assets/baju_adat/babali.png;
+            itemCategory: costume;
+            collectDistance: 4;
+          "
+          static-body="shape: box"
+        >
+          <a-plane 
+            src="#baju-bali"
+            width="1.6" 
+            height="2.1" 
+            position="0 -3 0"
+            material="transparent:true; alphaTest:0.5; side:double; shader:flat; emissive:#ffffff; emissiveIntensity:0.3"
+          ></a-plane>
+          <a-ring
+            color="#FFD700"
+            radius-inner="1.0"
+            radius-outer="1.2"
+            position="0 -4 0"
+            rotation="-90 0 0"
+            material="shader:flat; transparent:true; opacity:1; emissive:#FFD700; emissiveIntensity:0.8"
+            animation="property: scale; from: 0.95 0.95 0.95; to: 1.15 1.15 1.15; to: 0.95 0.95 0.95; dur: 2000; dir: alternate; easing: easeInOutSine; loop: true"
+          ></a-ring>
+        </a-entity>
+
+        <!-- Artefak Rong Tiga Bali -->
+        <a-entity
+          gltf-model="url(/assets/rumah_adat/artefak_rong_tiga_bali.glb)"
+          position="68 -0.4 4"
+          scale="1 1 1"
+          rotation="0 180 0"
+          class="environmentGround environmentDressing collidable"
+          shadow="cast:false;receive:true"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+
+        <!-- Artefak Taksu Bali -->
+        <a-entity
+          gltf-model="url(/assets/rumah_adat/artefak_taksu_bali.glb)"
+          position="70 -0.4 2"
+          scale="1 1 1"
+          rotation="0 0 0"
+          class="environmentGround environmentDressing collidable"
+          shadow="cast:false;receive:true"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+
+        <!-- Rumah Joglo - Jawa (bawah tengah) -->
+        <a-entity
+          gltf-model="url(/assets/rumah_adat/rumah_joglo_jawa.glb)"
+          position="10 0.2 20"
+          scale="4 4 4"
+          rotation="0 180 0"
+          class="environmentGround environmentDressing collidable"
+          shadow="cast:false;receive:true"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+
+        <!-- Portal Masuk Rumah Joglo Jawa (di depan rumah) -->
+        <a-entity
+          position="-3.48 -0.11 36.54"
+          teleport-portal="targetPosition: -3.90 0.36 48.13; triggerDistance: 1; portalType: entrance"
+        ></a-entity>
+
+        <!-- Portal Keluar Rumah Joglo Jawa (di dalam rumah) -->
+        <a-entity
+          position="-3.29 0.36 43"
+          teleport-portal="targetPosition: 13 -0.11 8.11; triggerDistance: 1; portalType: exit"
+        ></a-entity>
+
+        <!-- DISPLAY BAJU ADAT JAWA - di dalam rumah Joglo -->
+        <!-- Display baju adat dengan collectible component -->
+        <a-entity 
+          position="4 4.3 45"
+          rotation="0 180 0"
+          collectible-item="
+            itemId: baju-beskap-jawa;
+            itemName: Pakaian Beskap dari Jawa;
+            itemDescription: Beskap adalah baju adat pria Jawa (terutama dari wilayah Solo dan Yogyakarta) yang merupakan atasan resmi dan elegan, sering disamakan dengan jas tutup. Pakaian ini sarat akan filosofi dan umumnya dikenakan dalam acara-acara penting, seperti pernikahan, upacara adat, dan pertemuan resmi.;
+            itemImage: /assets/baju_adat/bajawa.png;
+            itemCategory: costume;
+            collectDistance: 4;
+          "
+          static-body="shape: box"
+        >
+          <!-- Gambar baju adat PNG dengan background transparan -->
+          <a-plane 
+            src="#baju-jawa"
+            width="1.5" 
+            height="2" 
+            position="0 -3 0"
+            material="transparent:true; alphaTest:0.5; side:double; shader:flat; emissive:#ffffff; emissiveIntensity:0.3"
+          ></a-plane>
+          
+          <!-- Indicator circle untuk collection area - selalu tampil -->
+          <!-- Ring dengan efek pulse membesar-kecil terus menerus (bolak-balik) -->
+          <a-ring
+            color="#FFD700"
+            radius-inner="1.0"
+            radius-outer="1.2"
+            position="0 -4 0"
+            rotation="-90 0 0"
+            material="shader:flat; transparent:true; opacity:1; emissive:#FFD700; emissiveIntensity:0.8"
+            animation="property: scale; from: 0.95 0.95 0.95; to: 1.15 1.15 1.15; to: 0.95 0.95 0.95; dur: 2000; dir: alternate; easing: easeInOutSine; loop: true"
+          ></a-ring>
+        </a-entity>
+
+        <!-- Rumah Tolitoli - Sulawesi Tengah (sebelah kiri Saoraja) -->
+        <a-entity
+          gltf-model="url(/assets/rumah_adat/rumah_tolitoli_sulteng.glb)"
+          position="57 -1 -18"
+          scale="1 1 1"
+          rotation="0 0 0"
+          class="environmentGround environmentDressing collidable"
+          shadow="cast:false;receive:true"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+
+        <!-- Portal Masuk Rumah Tolitoli -->
+        <a-entity
+          position="57.82 -0.40 -20.47"
+          rotation="0 90 0"
+          teleport-portal="targetPosition: 69.63 2.32 -20.60; triggerDistance: 1; portalType: entrance"
+        ></a-entity>
+
+        <!-- Portal Keluar Rumah Tolitoli -->
+        <a-entity
+          position="62.11 2.32 -20.42"
+          rotation="0 90 0"
+          teleport-portal="targetPosition: 61 -0.40 -17; triggerDistance: 1; portalType: exit"
+        ></a-entity>
+
+        <!-- Display Baju Adat Tolitoli -->
+        <a-entity 
+          position="63 6.5 -28.44"
+          rotation="0 200 0"
+          collectible-item="
+            itemId: baju-nggoli-sulteng;
+            itemName: Pakaian Ngata Tolitoli - Sulawesi Tengah;
+            itemDescription: Busana adat Ngata Tolitoli dikenakan oleh bangsawan Sulawesi Tengah dengan perpaduan warna cerah dan aksen sulam emas yang menonjolkan status sosial;
+            itemImage: /assets/baju_adat/batolitoli.png;
+            itemCategory: costume;
+            collectDistance: 4;
+          "
+          static-body="shape: box"
+        >
+          <a-plane 
+            src="#baju-sulteng"
+            width="1.6" 
+            height="2.1" 
+            position="0 -3 0"
+            material="transparent:true; alphaTest:0.5; side:double; shader:flat; emissive:#ffffff; emissiveIntensity:0.3"
+          ></a-plane>
+          <a-ring
+            color="#FFD700"
+            radius-inner="1.0"
+            radius-outer="1.2"
+            position="0 -4 0"
+            rotation="-90 0 0"
+            material="shader:flat; transparent:true; opacity:1; emissive:#FFD700; emissiveIntensity:0.8"
+            animation="property: scale; from: 0.95 0.95 0.95; to: 1.15 1.15 1.15; to: 0.95 0.95 0.95; dur: 2000; dir: alternate; easing: easeInOutSine; loop: true"
+          ></a-ring>
+        </a-entity>
+
+        <!-- Rumah Saoraja - Sulawesi Selatan (bawah kanan) -->
+        <a-entity
+          gltf-model="url(/assets/rumah_adat/rumah_saoraja_sulsel.glb)"
+          position="75 -0.4 3"
+          scale="0.9 0.9 0.9"
+          rotation="0 180 0"
+          class="environmentGround environmentDressing collidable"
+          shadow="cast:false;receive:true"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+
+        <!-- Portal Masuk Rumah Saoraja Sulsel (di depan rumah) -->
+        <a-entity
+          position="32 -0.4 9.5"
+          teleport-portal="targetPosition: 44 2.79 3.79; triggerDistance: 1; portalType: entrance"
+        ></a-entity>
+
+        <!-- Portal Keluar Rumah Saoraja Sulsel (di dalam rumah) -->
+        <a-entity
+          position="38 2.79 13.5"
+          rotation="0 90 0"
+          teleport-portal="targetPosition: 39.5 -0.10 -4.39; triggerDistance: 1; portalType: exit"
+        ></a-entity>
+        
+        <!-- DISPLAY PAKAIAN BODO - di dalam rumah Saoraja Sulawesi Selatan -->
+        <!-- Display baju adat dengan collectible component -->
+        <a-entity 
+          position="43 2.79 54.28"
+          rotation="0 0 0"
+          collectible-item="
+            itemId: baju-bodo-sulsel;
+            itemName: Pakaian Bodo dari Sulawesi Selatan;
+            itemDescription: Pakaian Bodo adalah pakaian adat wanita suku Bugis-Makassar (Sulawesi Selatan) yang berbentuk blus longgar, segi empat, berlengan sangat pendek (bodo). Terbuat dari kain tipis transparan, Baju Bodo dipadukan dengan sarung sutra dan memiliki keunikan pada warna yang melambangkan status dan usia pemakainya (misalnya, hijau untuk bangsawan). Busana ini mewah, kaya perhiasan emas, dan digunakan dalam upacara adat.;
+            itemImage: /assets/baju_adat/basulsel.png;
+            itemCategory: costume;
+            collectDistance: 5;
+          "
+          static-body="shape: box"
+        >
+          <!-- Gambar baju adat PNG dengan background transparan -->
+          <a-plane 
+            src="#baju-sulsel"
+            width="1.5" 
+            height="2" 
+            position="0 -3 0"
+            material="transparent:true; alphaTest:0.5; side:double; shader:flat; emissive:#ffffff; emissiveIntensity:0.3"
+          ></a-plane>
+          
+          <!-- Indicator circle untuk collection area - selalu tampil -->
+          <!-- Ring dengan efek pulse membesar-kecil terus menerus (bolak-balik) -->
+          <a-ring
+            color="#FFD700"
+            radius-inner="1.0"
+            radius-outer="1.2"
+            position="0 -4 0"
+            rotation="-90 0 0"
+            material="shader:flat; transparent:true; opacity:1; emissive:#FFD700; emissiveIntensity:0.8"
+            animation="property: scale; from: 0.95 0.95 0.95; to: 1.15 1.15 1.15; to: 0.95 0.95 0.95; dur: 2000; dir: alternate; easing: easeInOutSine; loop: true"
+          ></a-ring>
+        </a-entity>
+
+        <!-- Lighting - OPTIMIZED -->
+        <a-entity light="type:ambient;intensity:0.7"></a-entity>
+        <a-entity light="type:directional;intensity:0.5;castShadow:true" position="2 4 2"></a-entity>
+        
+        <!-- Background Music - Plays when entering the game -->
+        <a-entity 
+          id="background-music-entity"
+          sound="src: #background-music; autoplay: false; loop: true; volume: 0.3; positional: false"
+        ></a-entity>
+
+        <!-- ===== GAMELAN MUSICAL INSTRUMENT ===== -->
+        <!-- Traditional Javanese gamelan ensemble -->
+        <a-entity
+          gltf-model="url(/assets/gamelan.glb)"
+          position="1.5 0.6 25"
+          scale="0.7 0.7 0.7"
+          rotation="0 180 0"
+          class="environmentGround environmentDressing collidable"
+          shadow="cast:true;receive:true"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+
+        <!-- ===== SATPAM GUARDS (PENJAGA RUMAH ADAT) ===== -->
+        <!-- Satpam guards yang menjelaskan sejarah rumah adat -->
+        
+        <!-- Satpam Sumbar - Penjaga Rumah Gadang -->
+        <a-entity
+          id="satpam-sumbar"
+          gltf-model="url(/assets/police.glb)"
+          position="-77.70 -0.10 -1"
+          scale="0.5 0.5 0.5"
+          rotation="0 180 0"
+          shadow="cast:true;receive:true"
+          static-body="shape: auto; mass: 0"
+          animation-mixer="clip: Idle; loop: repeat; repetitions: Infinity"
+          satpam-guard="
+            houseId: gadang_sumbar;
+            dialogDistance: 1.5;
+          "
+        ></a-entity>
+
+        <!-- Satpam Papua - Penjaga Rumah Honai -->
+        <a-entity
+          id="satpam-papua"
+          gltf-model="url(/assets/police.glb)"
+          position="-57 -0.2 -17"
+          scale="0.5 0.5 0.5"
+          rotation="0 0 0"
+          shadow="cast:true;receive:true"
+          static-body="shape: auto; mass: 0"
+          animation-mixer="clip: Idle; loop: repeat; repetitions: Infinity"
+          satpam-guard="
+            houseId: honai_papua;
+            dialogDistance: 1.5;
+          "
+        ></a-entity>
+
+        <!-- Satpam Aceh - Penjaga Rumah Krong -->
+        <a-entity
+          id="satpam-aceh"
+          gltf-model="url(/assets/police.glb)"
+          position="-43 0 0"
+          scale="0.5 0.5 0.5"
+          rotation="0 180 0"
+          shadow="cast:true;receive:true"
+          static-body="shape: auto; mass: 0"
+          animation-mixer="clip: Idle; loop: repeat; repetitions: Infinity"
+          satpam-guard="
+            houseId: krong_aceh;
+            dialogDistance: 1.5;
+          "
+        ></a-entity>
+
+        <!-- Satpam Batak - Penjaga Rumah Batak Sumut -->
+        <a-entity
+          id="satpam-batak"
+          gltf-model="url(/assets/police.glb)"
+          position="-76 -0.40 -17.10"
+          scale="0.5 0.5 0.5"
+          rotation="0 0 0"
+          shadow="cast:true;receive:true"
+          static-body="shape: auto; mass: 0"
+          animation-mixer="clip: Idle; loop: repeat; repetitions: Infinity"
+          satpam-guard="
+            houseId: batak_sumut;
+            dialogDistance: 1.5;
+          "
+        ></a-entity>
+
+        <!-- Satpam Lampung - Penjaga Rumah Lampung Sumatra -->
+        <a-entity
+          id="satpam-lampung"
+          gltf-model="url(/assets/police.glb)"
+          position="-21 0 -17"
+          scale="0.5 0.5 0.5"
+          rotation="0 0 0"
+          shadow="cast:true;receive:true"
+          static-body="shape: auto; mass: 0"
+          animation-mixer="clip: Idle; loop: repeat; repetitions: Infinity"
+          satpam-guard="
+            houseId: lampung_sumatra;
+            dialogDistance: 1.5;
+          "
+        ></a-entity>
+
+        <!-- Satpam Dayak - Penjaga Rumah Dayak Kalimantan -->
+        <a-entity
+          id="satpam-dayak"
+          gltf-model="url(/assets/police.glb)"
+          position="16.58 -0.4 -17"
+          scale="0.5 0.5 0.5"
+          rotation="0 0 0"
+          shadow="cast:true;receive:true"
+          static-body="shape: auto; mass: 0"
+          animation-mixer="clip: Idle; loop: repeat; repetitions: Infinity"
+          satpam-guard="
+            houseId: dayak_kalimantan;
+            dialogDistance: 1.5;
+          "
+        ></a-entity>
+
+        <!-- Satpam Bali - Penjaga Kompleks Artefak -->
+        <a-entity
+          id="satpam-bali"
+          gltf-model="url(/assets/police.glb)"
+          position="67.45 -0.40 -0.75"
+          scale="0.5 0.5 0.5"
+          rotation="0 180 0"
+          shadow="cast:true;receive:true"
+          static-body="shape: auto; mass: 0"
+          animation-mixer="clip: Idle; loop: repeat; repetitions: Infinity"
+          satpam-guard="
+            houseId: bali_artifacts;
+            dialogDistance: 1.5;
+          "
+        ></a-entity>
+
+        <!-- Satpam Jawa - Penjaga Rumah Joglo -->
+        <a-entity
+          id="satpam-jawa"
+          gltf-model="url(/assets/police.glb)"
+          position="16 -0.2 2"
+          scale="0.5 0.5 0.5"
+          rotation="0 180 0"
+          shadow="cast:true;receive:true"
+          static-body="shape: auto; mass: 0"
+          animation-mixer="clip: Idle; loop: repeat; repetitions: Infinity"
+          satpam-guard="
+            houseId: joglo_jawa;
+            dialogDistance: 1.5;
+          "
+        ></a-entity>
+
+        <!-- Satpam Sulteng - Penjaga Rumah Tolitoli -->
+        <a-entity
+          id="satpam-sulteng"
+          gltf-model="url(/assets/police.glb)"
+          position="64.71 -0.40 -18"
+          scale="0.5 0.5 0.5"
+          rotation="0 0 0"
+          shadow="cast:true;receive:true"
+          static-body="shape: auto; mass: 0"
+          animation-mixer="clip: Idle; loop: repeat; repetitions: Infinity"
+          satpam-guard="
+            houseId: tolitoli_sulteng;
+            dialogDistance: 1.5;
+          "
+        ></a-entity>
+
+        <!-- Satpam Sulsel - Penjaga Rumah Saoraja -->
+        <a-entity
+          id="satpam-sulsel"
+          gltf-model="url(/assets/police.glb)"
+          position="34 -0.3 9"
+          scale="0.5 0.5 0.5"
+          rotation="0 180 0"
+          shadow="cast:true;receive:true"
+          static-body="shape: auto; mass: 0"
+          animation-mixer="clip: Idle; loop: repeat; repetitions: Infinity"
+          satpam-guard="
+            houseId: saoraja_sulsel;
+            dialogDistance: 1.5;
+          "
+        ></a-entity>
+
+        <!-- ===== ONDEL-ONDEL NPCs ===== -->
+        <!-- Ondel-ondel figures moving along the corridor as NPCs -->
+        
+        <!-- Ondel-Ondel 1 - Moving from left to right -->
+        <a-entity
+          id="ondel-npc-1"
+          gltf-model="url(/assets/ondel.glb)"
+          position="-50 -3 -5"
+          scale="0.2 0.2 0.2"
+          rotation="0 90 0"
+          ondel-npc="
+            speed: 0.8;
+            direction: forward;
+            startPosition: -50 -3 -5;
+            corridorLength: 120;
+            pauseTime: 3000;
+            animationSpeed: 1.2;
+          "
+          shadow="cast:true;receive:true"
+          animation-mixer="loop: repeat; repetitions: Infinity"
+          static-body="shape: box"
+        ></a-entity>
+
+        <!-- Ondel-Ondel 2 - Moving from right to left -->
+        <a-entity
+          id="ondel-npc-2"
+          gltf-model="url(/assets/ondel.glb)"
+          position="50 -3 -9"
+          scale="0.2 0.2 0.2"
+          rotation="0 -90 0"
+          ondel-npc="
+            speed: 1.0;
+            direction: backward;
+            startPosition: 50 -3 -9;
+            corridorLength: 120;
+            pauseTime: 2500;
+            animationSpeed: 1.0;
+          "
+          shadow="cast:true;receive:true"
+          animation-mixer="loop: repeat; repetitions: Infinity"
+          static-body="shape: box"
+        ></a-entity>
+
+        <!-- Ondel-Ondel 3 - Moving from center-left to right -->
+        <a-entity
+          id="ondel-npc-3"
+          gltf-model="url(/assets/ondel.glb)"
+          position="-20 -3 -13"
+          scale="0.2 0.2 0.2"
+          rotation="0 90 0"
+          ondel-npc="
+            speed: 0.6;
+            direction: forward;
+            startPosition: -20 -3 -13;
+            corridorLength: 120;
+            pauseTime: 4000;
+            animationSpeed: 0.8;
+          "
+          shadow="cast:true;receive:true"
+          animation-mixer="loop: repeat; repetitions: Infinity"
+          static-body="shape: box"
+        ></a-entity>
+
+        <!-- Ondel-Ondel 4 - Moving from center-right to left -->
+        <a-entity
+          id="ondel-npc-4"
+          gltf-model="url(/assets/ondel.glb)"
+          position="20 -3 -2"
+          scale="0.2 0.2 0.2"
+          rotation="0 -90 0"
+          ondel-npc="
+            speed: 0.7;
+            direction: backward;
+            startPosition: 20 -3 2;
+            corridorLength: 120;
+            pauseTime: 3500;
+            animationSpeed: 0.9;
+          "
+          shadow="cast:true;receive:true"
+          animation-mixer="loop: repeat; repetitions: Infinity"
+          static-body="shape: box"
+        ></a-entity>
+      </a-entity>

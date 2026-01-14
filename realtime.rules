@@ -1,0 +1,14 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "rooms": {
+      "$roomCode": {
+        ".read": "auth != null && (data.child('hostId').val() == auth.uid || data.child('players').child(auth.uid).exists())",
+        ".write": "auth != null && ((!data.exists() && newData.child('hostId').val() == auth.uid) || data.child('hostId').val() == auth.uid || newData.child('players').child(auth.uid).exists())",
+        ".validate": "newData.hasChildren(['roomCode','roomName','hostId','hostName','hostSquadId','status','createdAt','squads','players'])"
+      }
+    }
+  }
+}
+

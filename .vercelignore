@@ -1,0 +1,34 @@
+# Dependencies
+node_modules
+
+# Build files
+public/dist/*.map
+
+# Server files (not needed for static deployment)
+server.js
+
+# Development files
+webpack.config.js
+.eslintrc.js
+.prettierrc
+
+# Documentation
+docs
+README.md
+
+# Git files
+.git
+.gitignore
+
+# Environment files
+.env.local
+.env*.local
+
+# Source files (already built to public/dist)
+src
+
+# Config files not needed in production
+tsconfig.json
+tailwind.config.js
+postcss.config.js
+

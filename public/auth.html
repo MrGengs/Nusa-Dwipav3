@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nusa-Dwipa - Authentication</title>
+    <meta name="description" content="Login or Register to enter the Nusa-Dwipa cultural experience">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#1e40af">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Nusa-Dwipa">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/assets/image/tittle.png" />
+    <link rel="apple-touch-icon" href="/assets/image/logo.png" />
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, EmailAuthProvider, onAuthStateChanged, linkWithCredential } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBA4qQj_Mg0Tanfe8nQNLqL33Rtii0ZhqA",
+            authDomain: "nusa-dwipa.firebaseapp.com",
+            databaseURL: "https://nusa-dwipa-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "nusa-dwipa",
+            storageBucket: "nusa-dwipa.firebasestorage.app",
+            messagingSenderId: "231878445619",
+            appId: "1:231878445619:web:ea7b04746f23afd73e7146",
+            measurementId: "G-MZ67EDBKF5"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const analytics = getAnalytics(app);
+        const googleProvider = new GoogleAuthProvider();
+        // Add additional scopes if needed
+        googleProvider.addScope('profile');
+        googleProvider.addScope('email');
+        // Set custom parameters
+        googleProvider.setCustomParameters({
+            prompt: 'select_account'
+        });
+
+        // Make Firebase available globally
+        window.auth = auth;
+        window.db = db;
+        window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+        window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
+        window.signInWithPopup = signInWithPopup;
+        window.signInWithRedirect = signInWithRedirect;
+        window.getRedirectResult = getRedirectResult;
+        window.googleProvider = googleProvider;
+        window.onAuthStateChanged = onAuthStateChanged;
+        window.EmailAuthProvider = EmailAuthProvider;
+        window.linkWithCredential = linkWithCredential;
+        window.doc = doc;
+        window.setDoc = setDoc;
+        window.getDoc = getDoc;
+        window.collection = collection;
+        window.query = query;
+        window.where = where;
+        window.getDocs = getDocs;
+    </script>
+
+    <!-- Custom CSS -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+        
+        * {
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 50%, #1d4ed8 100%);
+        }
+        
+        .floating {
+            animation: floating 3s ease-in-out infinite;
+        }
+        
+        @keyframes floating {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 1s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .slide-in-left {
+            animation: slideInLeft 0.8s ease-out;
+        }
+        
+        @keyframes slideInLeft {
+            from { opacity: 0; transform: translateX(-50px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        .slide-in-right {
+            animation: slideInRight 0.8s ease-out;
+        }
+        
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(50px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        .auth-card {
+            transition: all 0.3s ease;
+            background: linear-gradient(145deg, #ffffff, #f8fafc);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .auth-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #1e40af);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #1e40af, #1d4ed8);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+        }
+        
+        .btn-google {
+            background: #ffffff;
+            color: #333;
+            border: 2px solid #e5e7eb;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-google:hover {
+            background: #f9fafb;
+            border-color: #3b82f6;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .form-input {
+            transition: all 0.3s ease;
+            border: 2px solid #e5e7eb;
+        }
+        
+        .form-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .error-message {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+        
+        .success-message {
+            background: #f0fdf4;
+            color: #16a34a;
+            border: 1px solid #bbf7d0;
+        }
+        
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        
+        .loading-spinner {
+            border: 2px solid #f3f4f6;
+            border-top: 2px solid #3b82f6;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen flex items-center justify-center p-4">
+    <!-- Background Elements -->
+    <div class="absolute inset-0 overflow-hidden">
+        <div class="absolute top-20 left-10 w-32 h-32 bg-white/10 rounded-full floating" style="animation-delay: 0s;"></div>
+        <div class="absolute top-40 right-20 w-24 h-24 bg-white/5 rounded-full floating" style="animation-delay: 1s;"></div>
+        <div class="absolute bottom-40 left-1/4 w-20 h-20 bg-white/8 rounded-full floating" style="animation-delay: 2s;"></div>
+        <div class="absolute bottom-20 right-1/3 w-28 h-28 bg-white/6 rounded-full floating" style="animation-delay: 0.5s;"></div>
+    </div>
+
+    <!-- Main Auth Container -->
+    <div class="relative z-10 w-full max-w-md">
+        <!-- Logo -->
+        <div class="text-center mb-8 fade-in">
+            <div class="bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-2xl inline-block">
+                <img src="/assets/image/logo.png" alt="Nusa-Dwipa Logo" class="w-32 h-auto mx-auto floating">
+            </div>
+            <h1 class="text-3xl font-bold text-white mt-4 drop-shadow-lg">Welcome to Nusa-Dwipa</h1>
+            <p class="text-white/90 mt-2 drop-shadow-md">Explore Indonesian Cultural Heritage</p>
+        </div>
+
+        <!-- Auth Form Container -->
+        <div class="auth-card p-8 rounded-2xl fade-in">
+            <!-- Tab Navigation -->
+            <div class="flex mb-6">
+                <button id="login-tab" class="flex-1 py-2 px-4 text-center font-semibold rounded-lg transition-all bg-blue-600 text-white">
+                    Login
+                </button>
+                <button id="register-tab" class="flex-1 py-2 px-4 text-center font-semibold rounded-lg transition-all text-gray-600 hover:bg-gray-100">
+                    Register
+                </button>
+            </div>
+
+            <!-- Message Display -->
+            <div id="message-container" class="mb-4 hidden">
+                <div id="message" class="p-3 rounded-lg text-sm font-medium"></div>
+            </div>
+
+            <!-- Login Form -->
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label for="login-username" class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                    <input type="text" id="login-username" class="form-input w-full px-4 py-3 rounded-lg focus:outline-none" placeholder="Enter your username" required>
+                </div>
+                <div>
+                    <label for="login-password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                    <input type="password" id="login-password" class="form-input w-full px-4 py-3 rounded-lg focus:outline-none" placeholder="Enter your password" required>
+                </div>
+                <button type="submit" class="btn-primary w-full py-3 rounded-lg text-white font-semibold text-lg">
+                    <span id="login-text">Login</span>
+                    <div id="login-loading" class="loading-spinner mx-auto hidden"></div>
+                </button>
+            </form>
+
+            <!-- Register Form -->
+            <form id="register-form" class="space-y-4 hidden">
+                <div>
+                    <label for="register-username" class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                    <input type="text" id="register-username" class="form-input w-full px-4 py-3 rounded-lg focus:outline-none" placeholder="Choose a unique username" required>
+                </div>
+                <div>
+                    <label for="register-email" class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <input type="email" id="register-email" class="form-input w-full px-4 py-3 rounded-lg focus:outline-none" placeholder="Enter your email" required>
+                </div>
+                <div>
+                    <label for="register-password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                    <input type="password" id="register-password" class="form-input w-full px-4 py-3 rounded-lg focus:outline-none" placeholder="Create a password" required minlength="6">
+                </div>
+                <div>
+                    <label for="register-confirm-password" class="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
+                    <input type="password" id="register-confirm-password" class="form-input w-full px-4 py-3 rounded-lg focus:outline-none" placeholder="Confirm your password" required>
+                </div>
+                <button type="submit" class="btn-primary w-full py-3 rounded-lg text-white font-semibold text-lg">
+                    <span id="register-text">Create Account</span>
+                    <div id="register-loading" class="loading-spinner mx-auto hidden"></div>
+                </button>
+            </form>
+
+            <!-- Google Sign In -->
+            <div class="mt-6">
+                <div class="relative">
+                    <div class="absolute inset-0 flex items-center">
+                        <div class="w-full border-t border-gray-300"></div>
+                    </div>
+                    <div class="relative flex justify-center text-sm">
+                        <span class="px-2 bg-white text-gray-500">Or continue with</span>
+                    </div>
+                </div>
+                <button id="google-signin" class="btn-google w-full py-3 rounded-lg font-semibold text-lg mt-4 flex items-center justify-center space-x-2">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    <span>Continue with Google</span>
+                </button>
+            </div>
+
+            <!-- Back to Home -->
+            <div class="text-center mt-6">
+                <a href="index.html" class="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors">
+                    ← Back to Home
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Username Modal (for Google sign-in) -->
+    <div id="username-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 auth-card">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">Complete Your Profile</h3>
+            <p class="text-gray-600 mb-6">Please choose a unique username and set a password to complete your registration.</p>
+            <form id="username-form">
+                <!-- Message Display for Modal -->
+                <div id="modal-message-container" class="mb-4 hidden">
+                    <div id="modal-message" class="p-3 rounded-lg text-sm font-medium"></div>
+                </div>
+                <div class="mb-4">
+                    <label for="modal-username" class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                    <input type="text" id="modal-username" class="form-input w-full px-4 py-3 rounded-lg focus:outline-none" placeholder="Choose a unique username" required>
+                </div>
+                <div class="mb-4">
+                    <label for="modal-password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                    <input type="password" id="modal-password" class="form-input w-full px-4 py-3 rounded-lg focus:outline-none" placeholder="Create a password" required minlength="6">
+                </div>
+                <div class="mb-4">
+                    <label for="modal-confirm-password" class="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
+                    <input type="password" id="modal-confirm-password" class="form-input w-full px-4 py-3 rounded-lg focus:outline-none" placeholder="Confirm your password" required>
+                </div>
+                <div class="flex space-x-3">
+                    <button type="button" id="cancel-username" class="flex-1 py-3 px-4 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" class="flex-1 py-3 px-4 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                        Continue
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Wait for Firebase to load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Wait for Firebase modules to be available
+            const waitForFirebase = () => {
+                if (window.auth && window.db) {
+                    initializeAuth();
+                } else {
+                    setTimeout(waitForFirebase, 100);
+                }
+            };
+            waitForFirebase();
+        });
+
+        function initializeAuth() {
+            const auth = window.auth;
+            const db = window.db;
+            const signInWithEmailAndPassword = window.signInWithEmailAndPassword;
+            const createUserWithEmailAndPassword = window.createUserWithEmailAndPassword;
+            const signInWithPopup = window.signInWithPopup;
+            const signInWithRedirect = window.signInWithRedirect;
+            const getRedirectResult = window.getRedirectResult;
+            const googleProvider = window.googleProvider;
+            const onAuthStateChanged = window.onAuthStateChanged;
+            const doc = window.doc;
+            const setDoc = window.setDoc;
+            const getDoc = window.getDoc;
+            const collection = window.collection;
+            const query = window.query;
+            const where = window.where;
+            const getDocs = window.getDocs;
+
+            // Handle redirect result (if user was redirected back from Google)
+            // This will be called after functions are defined, so we'll move it later
+
+            // Tab switching functionality
+            const loginTab = document.getElementById('login-tab');
+            const registerTab = document.getElementById('register-tab');
+            const loginForm = document.getElementById('login-form');
+            const registerForm = document.getElementById('register-form');
+
+            loginTab.addEventListener('click', () => {
+                loginTab.classList.add('bg-blue-600', 'text-white');
+                loginTab.classList.remove('text-gray-600', 'hover:bg-gray-100');
+                registerTab.classList.remove('bg-blue-600', 'text-white');
+                registerTab.classList.add('text-gray-600', 'hover:bg-gray-100');
+                loginForm.classList.remove('hidden');
+                registerForm.classList.add('hidden');
+                clearMessage();
+            });
+
+            registerTab.addEventListener('click', () => {
+                registerTab.classList.add('bg-blue-600', 'text-white');
+                registerTab.classList.remove('text-gray-600', 'hover:bg-gray-100');
+                loginTab.classList.remove('bg-blue-600', 'text-white');
+                loginTab.classList.add('text-gray-600', 'hover:bg-gray-100');
+                registerForm.classList.remove('hidden');
+                loginForm.classList.add('hidden');
+                clearMessage();
+            });
+
+            // Utility functions
+            function showMessage(message, type = 'error') {
+                const container = document.getElementById('message-container');
+                const messageEl = document.getElementById('message');
+                container.classList.remove('hidden');
+                messageEl.textContent = message;
+                messageEl.className = `p-3 rounded-lg text-sm font-medium ${type === 'error' ? 'error-message' : 'success-message'}`;
+            }
+
+            function clearMessage() {
+                document.getElementById('message-container').classList.add('hidden');
+            }
+
+            // Show message in modal
+            function showModalMessage(message, type = 'error') {
+                const container = document.getElementById('modal-message-container');
+                const messageEl = document.getElementById('modal-message');
+                container.classList.remove('hidden');
+                messageEl.textContent = message;
+                messageEl.className = `p-3 rounded-lg text-sm font-medium ${type === 'error' ? 'error-message' : 'success-message'}`;
+            }
+
+            function clearModalMessage() {
+                document.getElementById('modal-message-container').classList.add('hidden');
+            }
+
+            function setLoading(formType, loading) {
+                const textEl = document.getElementById(`${formType}-text`);
+                const loadingEl = document.getElementById(`${formType}-loading`);
+                const button = document.querySelector(`#${formType}-form button[type="submit"]`);
+                
+                if (loading) {
+                    textEl.classList.add('hidden');
+                    loadingEl.classList.remove('hidden');
+                    button.classList.add('loading');
+                } else {
+                    textEl.classList.remove('hidden');
+                    loadingEl.classList.add('hidden');
+                    button.classList.remove('loading');
+                }
+            }
+
+            // Check if username is unique
+            async function isUsernameUnique(username) {
+                try {
+                    // For now, we'll skip the uniqueness check during registration
+                    // and handle it during the actual user creation process
+                    // This avoids permission issues with the usernames collection
+                    return true;
+                } catch (error) {
+                    console.error('Error checking username uniqueness:', error);
+                    return false;
+                }
+            }
+
+            // Check if username already exists
+            async function checkUsernameExists(username) {
+                try {
+                    const q = query(collection(db, 'users'), where('username', '==', username));
+                    const querySnapshot = await getDocs(q);
+                    return !querySnapshot.empty;
+                } catch (error) {
+                    console.error('Error checking username:', error);
+                    return false;
+                }
+            }
+
+            // Create user document
+            async function createUserDocument(user, username) {
+                try {
+                    // First, check if username already exists
+                    const usernameExists = await checkUsernameExists(username);
+                    
+                    if (usernameExists) {
+                        throw new Error('Username already exists');
+                    }
+                    
+                    // Get current timestamp
+                    const now = new Date();
+                    const timestamp = {
+                        seconds: Math.floor(now.getTime() / 1000),
+                        nanoseconds: (now.getTime() % 1000) * 1000000
+                    };
+                    
+                    // Create user document with UID as document ID
+                    await setDoc(doc(db, 'users', user.uid), {
+                        username: username,
+                        email: user.email,
+                        uid: user.uid,
+                        level: 1,
+                        experience: 0,
+                        collectedItems: [],
+                        achievements: [],
+                        avatarSrc: '',
+                        totalPlayTime: 0,
+                        createdAt: timestamp,
+                        updatedAt: timestamp,
+                        lastLogin: timestamp
+                    });
+                    
+                    return true;
+                } catch (error) {
+                    console.error('Error creating user document:', error);
+                    if (error.message === 'Username already exists') {
+                        throw error;
+                    }
+                    return false;
+                }
+            }
+
+            // Update last login
+            async function updateLastLogin(userId) {
+                try {
+                    const now = new Date();
+                    const timestamp = {
+                        seconds: Math.floor(now.getTime() / 1000),
+                        nanoseconds: (now.getTime() % 1000) * 1000000
+                    };
+                    
+                    await setDoc(doc(db, 'users', userId), {
+                        lastLogin: timestamp,
+                        updatedAt: timestamp
+                    }, { merge: true });
+                } catch (error) {
+                    console.error('Error updating last login:', error);
+                }
+            }
+
+            // Helper function to handle Google sign-in success
+            async function handleGoogleSignInSuccess(user, db, doc, getDoc, setDoc, updateLastLogin, createUserDocument) {
+                try {
+                    // Check if user already exists in our database
+                    const userDoc = await getDoc(doc(db, 'users', user.uid));
+                    
+                    if (userDoc.exists()) {
+                        // User exists, update last login and redirect
+                        await updateLastLogin(user.uid);
+                        const userData = userDoc.data();
+                        
+                        localStorage.setItem('userUsername', userData.username);
+                        localStorage.setItem('userEmail', user.email);
+                        localStorage.setItem('userId', user.uid);
+                        
+                        showMessage('Login successful! Redirecting to room selection...', 'success');
+                        setTimeout(() => {
+                            window.location.href = 'room.html';
+                        }, 1000);
+                    } else {
+                        // New user, show username modal
+                        document.getElementById('username-modal').classList.remove('hidden');
+                    }
+                } catch (error) {
+                    console.error('Error handling Google sign-in success:', error);
+                    showMessage('Error processing sign-in. Please try again.');
+                }
+            }
+
+            // Login form handler
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                setLoading('login', true);
+                clearMessage();
+
+                const username = document.getElementById('login-username').value.trim();
+                const password = document.getElementById('login-password').value;
+
+                try {
+                    // Check if username exists in users collection
+                    const q = query(collection(db, 'users'), where('username', '==', username));
+                    const querySnapshot = await getDocs(q);
+
+                    if (querySnapshot.empty) {
+                        showMessage('Username not found. Please check your username or register a new account.');
+                        setLoading('login', false);
+                        return;
+                    }
+
+                    // Get the first document (should be only one)
+                    const userDoc = querySnapshot.docs[0];
+                    const userData = userDoc.data();
+                    const email = userData.email;
+                    const userId = userData.uid;
+
+                    // Sign in with email and password
+                    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                    const user = userCredential.user;
+
+                    // Update last login using the userId from the query
+                    await updateLastLogin(userId);
+
+                    // Store username in localStorage for the game
+                    localStorage.setItem('userUsername', username);
+                    localStorage.setItem('userEmail', email);
+                    localStorage.setItem('userId', userId);
+
+                    showMessage('Login successful! Redirecting to room selection...', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'room.html';
+                    }, 1000);
+
+                } catch (error) {
+                    console.error('Login error:', error);
+                    let errorMessage = 'Login failed. Please check your credentials.';
+                    
+                    if (error.code === 'auth/user-not-found') {
+                        errorMessage = 'No account found with this username.';
+                    } else if (error.code === 'auth/wrong-password') {
+                        errorMessage = 'Incorrect password.';
+                    } else if (error.code === 'auth/invalid-email') {
+                        errorMessage = 'Invalid email address.';
+                    } else if (error.code === 'auth/user-disabled') {
+                        errorMessage = 'This account has been disabled.';
+                    } else if (error.code === 'auth/too-many-requests') {
+                        errorMessage = 'Too many failed attempts. Please try again later.';
+                    }
+                    
+                    showMessage(errorMessage);
+                } finally {
+                    setLoading('login', false);
+                }
+            });
+
+            // Register form handler
+            registerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                setLoading('register', true);
+                clearMessage();
+
+                const username = document.getElementById('register-username').value.trim();
+                const email = document.getElementById('register-email').value.trim();
+                const password = document.getElementById('register-password').value;
+                const confirmPassword = document.getElementById('register-confirm-password').value;
+
+                // Validation
+                if (password !== confirmPassword) {
+                    showMessage('Passwords do not match.');
+                    setLoading('register', false);
+                    return;
+                }
+
+                if (password.length < 6) {
+                    showMessage('Password must be at least 6 characters long.');
+                    setLoading('register', false);
+                    return;
+                }
+
+                if (username.length < 3) {
+                    showMessage('Username must be at least 3 characters long.');
+                    setLoading('register', false);
+                    return;
+                }
+
+                try {
+                    // Create user account
+                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                    const user = userCredential.user;
+
+                    // Create user document in Firestore (this will check username uniqueness)
+                    const success = await createUserDocument(user, username);
+                    if (!success) {
+                        showMessage('Account created but failed to save profile. Please try logging in.');
+                        setLoading('register', false);
+                        return;
+                    }
+
+                    // Store username in localStorage for the game
+                    localStorage.setItem('userUsername', username);
+                    localStorage.setItem('userEmail', email);
+                    localStorage.setItem('userId', user.uid);
+
+                    showMessage('Account created successfully! Redirecting to room selection...', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'room.html';
+                    }, 1000);
+
+                } catch (error) {
+                    console.error('Registration error:', error);
+                    let errorMessage = 'Registration failed. Please try again.';
+                    
+                    if (error.message === 'Username already exists') {
+                        errorMessage = 'Username already exists. Please choose a different username.';
+                    } else if (error.code === 'auth/email-already-in-use') {
+                        errorMessage = 'Email already registered. Please use a different email or try logging in.';
+                    } else if (error.code === 'auth/invalid-email') {
+                        errorMessage = 'Invalid email address.';
+                    } else if (error.code === 'auth/weak-password') {
+                        errorMessage = 'Password is too weak. Please choose a stronger password.';
+                    }
+                    
+                    showMessage(errorMessage);
+                } finally {
+                    setLoading('register', false);
+                }
+            });
+
+            // Google sign-in handler
+            const googleSignInBtn = document.getElementById('google-signin');
+            googleSignInBtn.addEventListener('click', async () => {
+                // Disable button and show loading
+                googleSignInBtn.disabled = true;
+                googleSignInBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                const originalText = googleSignInBtn.querySelector('span').textContent;
+                googleSignInBtn.querySelector('span').textContent = 'Signing in...';
+                
+                try {
+                    // Try popup first
+                    const result = await signInWithPopup(auth, googleProvider);
+                    const user = result.user;
+                    await handleGoogleSignInSuccess(user, db, doc, getDoc, setDoc, updateLastLogin, createUserDocument);
+                } catch (error) {
+                    console.error('Google sign-in error:', error);
+                    console.error('Error code:', error.code);
+                    console.error('Error message:', error.message);
+                    console.error('Full error:', error);
+                    
+                    // Handle specific error cases
+                    if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
+                        showMessage('Sign-in cancelled.');
+                    } else if (error.code === 'auth/popup-blocked') {
+                        // Popup blocked, try redirect instead
+                        showMessage('Popup blocked. Redirecting to Google sign-in...', 'success');
+                        try {
+                            await signInWithRedirect(auth, googleProvider);
+                            // Page will redirect, so we don't need to do anything else
+                            return;
+                        } catch (redirectError) {
+                            console.error('Redirect sign-in error:', redirectError);
+                            showMessage('Unable to sign in. Please check your browser settings and try again.');
+                        }
+                    } else if (error.code === 'auth/network-request-failed') {
+                        showMessage('Network error. Please check your internet connection and try again.');
+                    } else if (error.code === 'auth/unauthorized-domain') {
+                        showMessage('This domain is not authorized. Please contact support.');
+                    } else if (error.code === 'auth/operation-not-allowed') {
+                        showMessage('Google sign-in is not enabled. Please contact support.');
+                    } else {
+                        // Generic error - show detailed message for debugging
+                        const errorMsg = error.message || 'Unknown error occurred';
+                        showMessage(`Google sign-in failed: ${errorMsg}. Please try again.`);
+                    }
+                } finally {
+                    // Re-enable button
+                    googleSignInBtn.disabled = false;
+                    googleSignInBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    googleSignInBtn.querySelector('span').textContent = originalText;
+                }
+            });
+
+            // Username modal handlers
+            document.getElementById('cancel-username').addEventListener('click', () => {
+                document.getElementById('username-modal').classList.add('hidden');
+                clearModalMessage(); // Clear any messages
+                // Sign out the user since they cancelled
+                auth.signOut();
+            });
+
+            document.getElementById('username-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                clearModalMessage(); // Clear any previous messages
+                
+                const username = document.getElementById('modal-username').value.trim();
+                const password = document.getElementById('modal-password').value;
+                const confirmPassword = document.getElementById('modal-confirm-password').value;
+                
+                // Validation
+                if (username.length < 3) {
+                    showModalMessage('Username must be at least 3 characters long.');
+                    return;
+                }
+
+                if (password !== confirmPassword) {
+                    showModalMessage('Passwords do not match.');
+                    return;
+                }
+
+                if (password.length < 6) {
+                    showModalMessage('Password must be at least 6 characters long.');
+                    return;
+                }
+
+                try {
+                    // Get current user
+                    const user = auth.currentUser;
+                    if (!user) {
+                        showModalMessage('Authentication error. Please try again.');
+                        return;
+                    }
+
+                    // Link email/password credential to the Google account
+                    // This allows users to sign in with username/password later
+                    const EmailAuthProvider = window.EmailAuthProvider;
+                    const linkWithCredential = window.linkWithCredential;
+                    
+                    const emailCredential = EmailAuthProvider.credential(user.email, password);
+                    await linkWithCredential(user, emailCredential);
+
+                    // Create user document (this will check username uniqueness)
+                    const success = await createUserDocument(user, username);
+                    if (!success) {
+                        showModalMessage('Failed to save profile. Please try again.');
+                        return;
+                    }
+
+                    // Store username in localStorage
+                    localStorage.setItem('userUsername', username);
+                    localStorage.setItem('userEmail', user.email);
+                    localStorage.setItem('userId', user.uid);
+
+                    // Close modal and redirect
+                    document.getElementById('username-modal').classList.add('hidden');
+                    // Show success message in main form area since modal is closing
+                    showMessage('Account created successfully! Redirecting to room selection...', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'room.html';
+                    }, 1000);
+
+                } catch (error) {
+                    console.error('Error creating user profile:', error);
+                    if (error.message === 'Username already exists') {
+                        showModalMessage('Username already exists. Please choose a different username.');
+                    } else if (error.code === 'auth/email-already-in-use') {
+                        showModalMessage('Email already linked to another account.');
+                    } else {
+                        showModalMessage('Failed to create profile. Please try again.');
+                    }
+                }
+            });
+
+            // Handle redirect result (if user was redirected back from Google)
+            // This must be called after all functions are defined
+            getRedirectResult(auth).then((result) => {
+                if (result) {
+                    console.log('Redirect result found, processing sign-in...');
+                    // User signed in via redirect
+                    const user = result.user;
+                    handleGoogleSignInSuccess(user, db, doc, getDoc, setDoc, updateLastLogin, createUserDocument);
+                }
+            }).catch((error) => {
+                console.error('Redirect result error:', error);
+                // Only show error if it's not a cancelled operation or expected errors
+                if (error.code && 
+                    error.code !== 'auth/popup-closed-by-user' && 
+                    error.code !== 'auth/cancelled-popup-request' &&
+                    error.code !== 'auth/account-exists-with-different-credential') {
+                    console.error('Unexpected redirect error:', error);
+                }
+            });
+
+            // Check if user is already logged in
+            // Prevent redirect loop: only redirect if we're not coming from game.html
+            const fromGame = document.referrer.includes('game.html') || sessionStorage.getItem('authLoopPrevention');
+            
+            onAuthStateChanged(auth, (user) => {
+                if (user && !fromGame) {
+                    console.log('[Auth] User state changed - user found:', user.uid);
+                    // User is signed in, check if they have a complete profile
+                    getDoc(doc(db, 'users', user.uid)).then((docSnap) => {
+                        if (docSnap.exists()) {
+                            const userData = docSnap.data();
+                            console.log('[Auth] User data retrieved from Firestore:', userData);
+                            localStorage.setItem('userUsername', userData.username);
+                            localStorage.setItem('userEmail', user.email);
+                            localStorage.setItem('userId', user.uid);
+                            
+                            // Set flag to prevent loop and redirect to room selection
+                            sessionStorage.setItem('authLoopPrevention', 'true');
+                            console.log('[Auth] Redirecting to room.html');
+                            window.location.href = 'room.html';
+                        } else {
+                            console.log('[Auth] No user document found in Firestore');
+                        }
+                    }).catch((error) => {
+                        console.error('[Auth] Error retrieving user data from Firestore:', error);
+                    });
+                } else if (user && fromGame) {
+                    console.log('[Auth] User logged in but came from game.html - staying on auth page to prevent loop');
+                } else {
+                    console.log('[Auth] User state changed - no user found');
+                    // Clear the loop prevention flag when user is not logged in
+                    sessionStorage.removeItem('authLoopPrevention');
+                }
+            });
+        }
+
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then((registration) => {
+                        console.log('Service Worker registered successfully:', registration.scope);
+                    })
+                    .catch((error) => {
+                        console.log('Service Worker registration failed:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>

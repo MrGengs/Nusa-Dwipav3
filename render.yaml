@@ -1,0 +1,18 @@
+# Render configuration for backend WebSocket server
+# Deploy this to Render.com for WebSocket support
+
+services:
+  - type: web
+    name: nusantara-quest-backend
+    env: node
+    region: singapore  # Choose region closest to your users
+    plan: free  # Change to 'starter' or 'standard' for production
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000  # Render default port
+    healthCheckPath: /
+

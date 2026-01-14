@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en" id="htmlLang">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="pageTitle">Nusa-Dwipa - Explore & Discover Nusantara</title>
+    <meta name="description" id="pageDescription" content="Nusa-Dwipa is a Multiplayer Educational Game for Introducing The Rich Cultural Heritage of the Indonesian Archipelago">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#1e40af">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Nusa-Dwipa">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/assets/image/tittle.png" />
+    <link rel="apple-touch-icon" href="/assets/image/logo.png" />
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom CSS -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+        
+        * {
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 50%, #1d4ed8 100%);
+        }
+        
+        .hero-pattern {
+            background-image: 
+                radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+        }
+        
+        .floating {
+            animation: floating 3s ease-in-out infinite;
+        }
+        
+        @keyframes floating {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 1s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .slide-in-left {
+            animation: slideInLeft 0.8s ease-out;
+        }
+        
+        @keyframes slideInLeft {
+            from { opacity: 0; transform: translateX(-50px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        .slide-in-right {
+            animation: slideInRight 0.8s ease-out;
+        }
+        
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(50px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        .cultural-card {
+            transition: all 0.3s ease;
+            background: linear-gradient(145deg, #ffffff, #f8fafc);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .cultural-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #1e40af);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #1e40af, #1d4ed8);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+        }
+        
+        .text-gradient {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .island-shape {
+            clip-path: polygon(0% 0%, 100% 0%, 85% 100%, 0% 100%);
+        }
+        
+        .parallax-bg {
+            background-attachment: fixed;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: cover;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 bg-white/90 backdrop-blur-md shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <img src="/assets/image/logo.png" alt="Nusa-Dwipa Logo" class="h-24 w-auto">
+                </div>
+                <div class="hidden md:flex space-x-8">
+                    <a href="#home" class="text-gray-700 hover:text-blue-600 transition-colors" data-i18n="nav.home">Home</a>
+                    <a href="#features" class="text-gray-700 hover:text-blue-600 transition-colors" data-i18n="nav.features">Features</a>
+                    <a href="#culture" class="text-gray-700 hover:text-blue-600 transition-colors" data-i18n="nav.culture">Culture</a>
+                    <a href="#about" class="text-gray-700 hover:text-blue-600 transition-colors" data-i18n="nav.about">About</a>
+                    <a href="leaderboard.html" class="text-gray-700 hover:text-blue-600 transition-colors" data-i18n="nav.leaderboard">Leaderboard</a>
+                </div>
+                <div class="flex items-center gap-2 md:gap-4">
+                    <button id="languageToggle" class="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-100 transition-colors" title="Switch Language / Ganti Bahasa">
+                        <span id="currentLang" class="font-semibold text-sm md:text-base">EN</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"></path>
+                        </svg>
+                    </button>
+                    <button id="navEnterGameBtn" class="btn-primary text-white px-4 md:px-6 py-2 rounded-lg font-semibold text-sm md:text-base" data-i18n="nav.enterGame">Enter Game</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="gradient-bg hero-pattern min-h-screen flex items-center relative overflow-hidden">
+        <!-- Floating Islands Background -->
+        <div class="absolute inset-0 overflow-hidden">
+            <div class="absolute top-20 left-10 w-32 h-32 bg-white/10 rounded-full floating" style="animation-delay: 0s;"></div>
+            <div class="absolute top-40 right-20 w-24 h-24 bg-white/5 rounded-full floating" style="animation-delay: 1s;"></div>
+            <div class="absolute bottom-40 left-1/4 w-20 h-20 bg-white/8 rounded-full floating" style="animation-delay: 2s;"></div>
+            <div class="absolute bottom-20 right-1/3 w-28 h-28 bg-white/6 rounded-full floating" style="animation-delay: 0.5s;"></div>
+        </div>
+        
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="grid lg:grid-cols-2 gap-12 items-center">
+                <div class="fade-in pt-24 md:pt-0">
+                    <h1 class="text-5xl lg:text-7xl font-bold text-gray-900 mb-6 leading-tight drop-shadow-lg">
+                        <span data-i18n="hero.title1">Explore & Discover</span>
+                        <span class="block text-blue-700">NUSANTARA</span>
+                    </h1>
+                    <p class="text-xl text-gray-800 mb-8 leading-relaxed drop-shadow-md" data-i18n="hero.description">
+                        Immerse yourself in Indonesia's rich cultural heritage through our multiplayer educational game. 
+                        Discover traditional houses, authentic costumes, and ancient traditions from across the archipelago.
+                    </p>
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <button id="heroEnterGameBtn" class="btn-primary text-white px-8 py-4 rounded-lg font-semibold text-lg text-center shadow-lg" data-i18n="hero.startJourney">Start Your Journey</button>
+                        <a href="#features" class="border-2 border-blue-600 text-blue-600 px-8 py-4 rounded-lg font-semibold text-lg text-center hover:bg-blue-600 hover:text-white transition-all shadow-lg" data-i18n="hero.learnMore">Learn More</a>
+                    </div>
+                </div>
+                <div class="slide-in-right">
+                    <div class="relative">
+                        <div class="bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-2xl">
+                            <img src="/assets/image/logo.png" alt="Nusa-Dwipa Logo" class="w-full max-w-md mx-auto floating">
+                        </div>
+                        <div class="absolute -top-4 -right-4 w-24 h-24 bg-blue-300/20 rounded-full animate-pulse"></div>
+                        <div class="absolute -bottom-4 -left-4 w-16 h-16 bg-white/20 rounded-full animate-pulse" style="animation-delay: 1s;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Partners Section -->
+    <section class="py-16 bg-blue-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-gray-800 mb-4" data-i18n="partners.title">Our Partners</h2>
+                <p class="text-lg text-gray-600" data-i18n="partners.description">
+                    Collaborating with leading technology companies
+                </p>
+            </div>
+            
+            <div class="flex flex-col md:flex-row items-center justify-center gap-16">
+                <!-- Enuma Technology -->
+                <a href="https://enumatechnology.com" target="_blank" rel="noopener noreferrer" class="partner-logo group">
+                    <img src="/assets/image/enuma.png" alt="Enuma Technology" class="h-20 w-auto opacity-80 group-hover:opacity-100 transition-opacity duration-300 group-hover:scale-105 transform transition-transform">
+                </a>
+                
+                <!-- Mersif Lab -->
+                <a href="https://mersiflab.com" target="_blank" rel="noopener noreferrer" class="partner-logo group">
+                    <img src="/assets/image/mersiflab.png" alt="Mersif Lab" class="h-20 w-auto opacity-80 group-hover:opacity-100 transition-opacity duration-300 group-hover:scale-105 transform transition-transform">
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-gray-800 mb-4" data-i18n="features.title">Game Features</h2>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto" data-i18n="features.description">
+                    Experience Indonesia's cultural diversity through immersive technology and interactive learning
+                </p>
+            </div>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="cultural-card p-8 rounded-2xl text-center">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4" data-i18n="features.multiplayer.title">Multiplayer Experience</h3>
+                    <p class="text-gray-600" data-i18n="features.multiplayer.description">Connect with friends and explore Indonesian culture together in a shared virtual world</p>
+                </div>
+                
+                <div class="cultural-card p-8 rounded-2xl text-center">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4" data-i18n="features.houses.title">Traditional Houses</h3>
+                    <p class="text-gray-600" data-i18n="features.houses.description">Explore authentic traditional houses from different regions across Indonesia</p>
+                </div>
+                
+                <div class="cultural-card p-8 rounded-2xl text-center">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4" data-i18n="features.costumes.title">Cultural Costumes</h3>
+                    <p class="text-gray-600" data-i18n="features.costumes.description">Collect and learn about traditional Indonesian costumes and their cultural significance</p>
+                </div>
+                
+                <div class="cultural-card p-8 rounded-2xl text-center">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4" data-i18n="features.educational.title">Educational Content</h3>
+                    <p class="text-gray-600" data-i18n="features.educational.description">Learn about Indonesian history, traditions, and cultural practices through interactive experiences</p>
+                </div>
+                
+                <div class="cultural-card p-8 rounded-2xl text-center">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4" data-i18n="features.graphics.title">3D Graphics</h3>
+                    <p class="text-gray-600" data-i18n="features.graphics.description">Stunning 3D graphics that bring Indonesian culture to life with immersive visual experiences</p>
+                </div>
+                
+                <div class="cultural-card p-8 rounded-2xl text-center">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4" data-i18n="features.learning.title">Interactive Learning</h3>
+                    <p class="text-gray-600" data-i18n="features.learning.description">Engage with cultural artifacts and learn through hands-on exploration and discovery</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Cultural Heritage Section -->
+    <section id="culture" class="py-20 bg-blue-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-gray-800 mb-4" data-i18n="culture.title">Discover Indonesian Culture</h2>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto" data-i18n="culture.description">
+                    From Sumatra to Papua, explore the diverse cultural heritage of the Indonesian archipelago
+                </p>
+            </div>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Aceh -->
+                <div class="cultural-card p-6 rounded-xl">
+                    <div class="aspect-w-16 aspect-h-9 mb-4">
+                        <img src="/assets/baju_adat/baaceh.png" alt="Aceh Traditional Costume" class="w-full h-48 object-cover rounded-lg">
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-2" data-i18n="culture.aceh.title">Aceh - Ulee Balang</h3>
+                    <p class="text-gray-600 text-sm" data-i18n="culture.aceh.description">Traditional royal costume from Aceh, symbolizing nobility and high social status</p>
+                </div>
+                
+                <!-- Sumatra -->
+                <div class="cultural-card p-6 rounded-xl">
+                    <div class="aspect-w-16 aspect-h-9 mb-4">
+                        <img src="/assets/baju_adat/basumatra.png" alt="Sumatra Traditional Costume" class="w-full h-48 object-cover rounded-lg">
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-2" data-i18n="culture.sumatra.title">Sumatra - Pepadun</h3>
+                    <p class="text-gray-600 text-sm" data-i18n="culture.sumatra.description">Elegant white and gold ceremonial dress from Lampung, representing purity and nobility</p>
+                </div>
+                
+                <!-- Jawa -->
+                <div class="cultural-card p-6 rounded-xl">
+                    <div class="aspect-w-16 aspect-h-9 mb-4">
+                        <img src="/assets/baju_adat/bajawa.png" alt="Jawa Traditional Costume" class="w-full h-48 object-cover rounded-lg">
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-2" data-i18n="culture.jawa.title">Jawa - Beskap</h3>
+                    <p class="text-gray-600 text-sm" data-i18n="culture.jawa.description">Formal Javanese men's attire from Solo and Yogyakarta, rich in philosophical meaning</p>
+                </div>
+                
+                <!-- Kalimantan -->
+                <div class="cultural-card p-6 rounded-xl">
+                    <div class="aspect-w-16 aspect-h-9 mb-4">
+                        <img src="/assets/baju_adat/badayak.png" alt="Kalimantan Traditional Costume" class="w-full h-48 object-cover rounded-lg">
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-2" data-i18n="culture.kalimantan.title">Kalimantan - Sapei Sapaq</h3>
+                    <p class="text-gray-600 text-sm" data-i18n="culture.kalimantan.description">Traditional Dayak ceremonial attire from East Kalimantan, worn for important rituals</p>
+                </div>
+                
+                <!-- Sulawesi Selatan -->
+                <div class="cultural-card p-6 rounded-xl">
+                    <div class="aspect-w-16 aspect-h-9 mb-4">
+                        <img src="/assets/baju_adat/basulsel.png" alt="Sulawesi Selatan Traditional Costume" class="w-full h-48 object-cover rounded-lg">
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-2" data-i18n="culture.sulsel.title">Sulawesi Selatan - Baju Bodo</h3>
+                    <p class="text-gray-600 text-sm" data-i18n="culture.sulsel.description">Elegant Bugis-Makassar women's dress with unique color symbolism and gold accessories</p>
+                </div>
+                
+                <!-- Papua -->
+                <div class="cultural-card p-6 rounded-xl">
+                    <div class="aspect-w-16 aspect-h-9 mb-4">
+                        <img src="/assets/baju_adat/bapapua.png" alt="Papua Traditional Costume" class="w-full h-48 object-cover rounded-lg">
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-2" data-i18n="culture.papua.title">Papua - Koteka</h3>
+                    <p class="text-gray-600 text-sm" data-i18n="culture.papua.description">Traditional attire from Papua's highlands, made from natural materials with deep cultural significance</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid lg:grid-cols-2 gap-12 items-center">
+                <div class="slide-in-left">
+                    <h2 class="text-4xl font-bold text-gray-800 mb-6" data-i18n="about.title">About Nusa-Dwipa</h2>
+                    <p class="text-lg text-gray-600 mb-6" data-i18n="about.description1">
+                        Nusa-Dwipa is an innovative multiplayer educational game designed to introduce players to the rich 
+                        cultural heritage of the Indonesian archipelago. Through immersive technology, 
+                        players can explore traditional houses, collect authentic costumes, and learn about the diverse 
+                        cultures that make up Indonesia.
+                    </p>
+                    <p class="text-lg text-gray-600 mb-8" data-i18n="about.description2">
+                        Our mission is to preserve and promote Indonesian cultural heritage through interactive digital 
+                        experiences, making learning about culture engaging, accessible, and fun for people of all ages.
+                    </p>
+                    <div class="flex flex-wrap gap-4">
+                        <div class="bg-blue-50 px-4 py-2 rounded-full">
+                            <span class="text-blue-700 font-semibold" data-i18n="about.tag.educational">Educational</span>
+                        </div>
+                        <div class="bg-blue-50 px-4 py-2 rounded-full">
+                            <span class="text-blue-700 font-semibold" data-i18n="about.tag.interactive">Interactive</span>
+                        </div>
+                        <div class="bg-blue-50 px-4 py-2 rounded-full">
+                            <span class="text-blue-700 font-semibold" data-i18n="about.tag.multiplayer">Multiplayer</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="slide-in-right">
+                    <div class="relative">
+                        <div class="bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl p-8 text-white">
+                            <h3 class="text-2xl font-bold mb-4" data-i18n="about.cta.title">Ready to Explore?</h3>
+                            <p class="text-lg mb-6" data-i18n="about.cta.description">Join thousands of players discovering Indonesian culture</p>
+                            <button id="aboutEnterGameBtn" class="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors inline-block" data-i18n="about.cta.button">Enter the Game</button>
+                        </div>
+                        <div class="absolute -top-4 -right-4 w-24 h-24 bg-blue-300 rounded-full opacity-20"></div>
+                        <div class="absolute -bottom-4 -left-4 w-16 h-16 bg-white rounded-full opacity-20"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid md:grid-cols-4 gap-8">
+                <div>
+                    <div class="flex items-center space-x-3 mb-1">
+                        <div class="bg-white/90 backdrop-blur-sm rounded-xl p-3 shadow-lg">
+                            <img src="/assets/image/logo.png" alt="Nusa-Dwipa Logo" class="h-24 w-auto">
+                        </div>
+                    </div>
+                    <p class="text-gray-400" data-i18n="footer.tagline">
+                        Explore & Discover Nusantara - A multiplayer educational game for Indonesian cultural heritage
+                    </p>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-4" data-i18n="footer.game.title">Game</h3>
+                    <ul class="space-y-2">
+                        <li><a href="auth.html" class="text-gray-400 hover:text-white transition-colors" data-i18n="footer.game.enter">Enter Game</a></li>
+                        <li><a href="leaderboard.html" class="text-gray-400 hover:text-white transition-colors" data-i18n="footer.game.leaderboard">Leaderboard</a></li>
+                        <li><a href="#features" class="text-gray-400 hover:text-white transition-colors" data-i18n="footer.game.features">Features</a></li>
+                        <li><a href="#culture" class="text-gray-400 hover:text-white transition-colors" data-i18n="footer.game.culture">Cultural Heritage</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-4" data-i18n="footer.learn.title">Learn</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors" data-i18n="footer.learn.houses">Traditional Houses</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors" data-i18n="footer.learn.costumes">Cultural Costumes</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors" data-i18n="footer.learn.history">History & Traditions</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-4" data-i18n="footer.connect.title">Connect</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors" data-i18n="footer.connect.about">About Us</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors" data-i18n="footer.connect.contact">Contact</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors" data-i18n="footer.connect.support">Support</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-8 text-center">
+                <p class="text-gray-400" data-i18n="footer.copyright">&copy; 2024 Nusa-Dwipa. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Language Translation Script -->
+    <script>
+        // Language translations
+        const translations = {
+            en: {
+                nav: {
+                    home: "Home",
+                    features: "Features",
+                    culture: "Culture",
+                    about: "About",
+                    leaderboard: "Leaderboard",
+                    enterGame: "Enter Game"
+                },
+                hero: {
+                    title1: "Explore & Discover",
+                    description: "Immerse yourself in Indonesia's rich cultural heritage through our multiplayer educational game. Discover traditional houses, authentic costumes, and ancient traditions from across the archipelago.",
+                    startJourney: "Start Your Journey",
+                    learnMore: "Learn More"
+                },
+                partners: {
+                    title: "Our Partners",
+                    description: "Collaborating with leading technology companies"
+                },
+                features: {
+                    title: "Game Features",
+                    description: "Experience Indonesia's cultural diversity through immersive technology and interactive learning",
+                    multiplayer: {
+                        title: "Multiplayer Experience",
+                        description: "Connect with friends and explore Indonesian culture together in a shared virtual world"
+                    },
+                    houses: {
+                        title: "Traditional Houses",
+                        description: "Explore authentic traditional houses from different regions across Indonesia"
+                    },
+                    costumes: {
+                        title: "Cultural Costumes",
+                        description: "Collect and learn about traditional Indonesian costumes and their cultural significance"
+                    },
+                    educational: {
+                        title: "Educational Content",
+                        description: "Learn about Indonesian history, traditions, and cultural practices through interactive experiences"
+                    },
+                    graphics: {
+                        title: "3D Graphics",
+                        description: "Stunning 3D graphics that bring Indonesian culture to life with immersive visual experiences"
+                    },
+                    learning: {
+                        title: "Interactive Learning",
+                        description: "Engage with cultural artifacts and learn through hands-on exploration and discovery"
+                    }
+                },
+                culture: {
+                    title: "Discover Indonesian Culture",
+                    description: "From Sumatra to Papua, explore the diverse cultural heritage of the Indonesian archipelago",
+                    aceh: {
+                        title: "Aceh - Ulee Balang",
+                        description: "Traditional royal costume from Aceh, symbolizing nobility and high social status"
+                    },
+                    sumatra: {
+                        title: "Sumatra - Pepadun",
+                        description: "Elegant white and gold ceremonial dress from Lampung, representing purity and nobility"
+                    },
+                    jawa: {
+                        title: "Jawa - Beskap",
+                        description: "Formal Javanese men's attire from Solo and Yogyakarta, rich in philosophical meaning"
+                    },
+                    kalimantan: {
+                        title: "Kalimantan - Sapei Sapaq",
+                        description: "Traditional Dayak ceremonial attire from East Kalimantan, worn for important rituals"
+                    },
+                    sulsel: {
+                        title: "Sulawesi Selatan - Baju Bodo",
+                        description: "Elegant Bugis-Makassar women's dress with unique color symbolism and gold accessories"
+                    },
+                    papua: {
+                        title: "Papua - Koteka",
+                        description: "Traditional attire from Papua's highlands, made from natural materials with deep cultural significance"
+                    }
+                },
+                about: {
+                    title: "About Nusa-Dwipa",
+                    description1: "Nusa-Dwipa is an innovative multiplayer educational game designed to introduce players to the rich cultural heritage of the Indonesian archipelago. Through immersive technology, players can explore traditional houses, collect authentic costumes, and learn about the diverse cultures that make up Indonesia.",
+                    description2: "Our mission is to preserve and promote Indonesian cultural heritage through interactive digital experiences, making learning about culture engaging, accessible, and fun for people of all ages.",
+                    tag: {
+                        educational: "Educational",
+                        interactive: "Interactive",
+                        multiplayer: "Multiplayer"
+                    },
+                    cta: {
+                        title: "Ready to Explore?",
+                        description: "Join thousands of players discovering Indonesian culture",
+                        button: "Enter the Game"
+                    }
+                },
+                footer: {
+                    tagline: "Explore & Discover Nusantara - A multiplayer educational game for Indonesian cultural heritage",
+                    game: {
+                        title: "Game",
+                        enter: "Enter Game",
+                        leaderboard: "Leaderboard",
+                        features: "Features",
+                        culture: "Cultural Heritage"
+                    },
+                    learn: {
+                        title: "Learn",
+                        houses: "Traditional Houses",
+                        costumes: "Cultural Costumes",
+                        history: "History & Traditions"
+                    },
+                    connect: {
+                        title: "Connect",
+                        about: "About Us",
+                        contact: "Contact",
+                        support: "Support"
+                    },
+                    copyright: "© 2024 Nusa-Dwipa. All rights reserved."
+                }
+            },
+            id: {
+                nav: {
+                    home: "Beranda",
+                    features: "Fitur",
+                    culture: "Budaya",
+                    about: "Tentang",
+                    leaderboard: "Peringkat",
+                    enterGame: "Masuk Game"
+                },
+                hero: {
+                    title1: "Jelajahi & Temukan",
+                    description: "Benamkan diri Anda dalam warisan budaya Indonesia yang kaya melalui game edukasi multiplayer kami. Temukan rumah tradisional, kostum autentik, dan tradisi kuno dari seluruh kepulauan.",
+                    startJourney: "Mulai Perjalanan Anda",
+                    learnMore: "Pelajari Lebih Lanjut"
+                },
+                partners: {
+                    title: "Mitra Kami",
+                    description: "Berkolaborasi dengan perusahaan teknologi terkemuka"
+                },
+                features: {
+                    title: "Fitur Game",
+                    description: "Rasakan keragaman budaya Indonesia melalui teknologi imersif dan pembelajaran interaktif",
+                    multiplayer: {
+                        title: "Pengalaman Multiplayer",
+                        description: "Terhubung dengan teman dan jelajahi budaya Indonesia bersama dalam dunia virtual yang sama"
+                    },
+                    houses: {
+                        title: "Rumah Tradisional",
+                        description: "Jelajahi rumah tradisional autentik dari berbagai daerah di Indonesia"
+                    },
+                    costumes: {
+                        title: "Kostum Budaya",
+                        description: "Kumpulkan dan pelajari tentang kostum tradisional Indonesia beserta makna budayanya"
+                    },
+                    educational: {
+                        title: "Konten Edukasi",
+                        description: "Pelajari sejarah, tradisi, dan praktik budaya Indonesia melalui pengalaman interaktif"
+                    },
+                    graphics: {
+                        title: "Grafik 3D",
+                        description: "Grafik 3D yang menakjubkan yang menghidupkan budaya Indonesia dengan pengalaman visual yang imersif"
+                    },
+                    learning: {
+                        title: "Pembelajaran Interaktif",
+                        description: "Berinteraksi dengan artefak budaya dan belajar melalui eksplorasi dan penemuan langsung"
+                    }
+                },
+                culture: {
+                    title: "Temukan Budaya Indonesia",
+                    description: "Dari Sumatra hingga Papua, jelajahi warisan budaya yang beragam dari kepulauan Indonesia",
+                    aceh: {
+                        title: "Aceh - Ulee Balang",
+                        description: "Kostum kerajaan tradisional dari Aceh, melambangkan bangsawan dan status sosial tinggi"
+                    },
+                    sumatra: {
+                        title: "Sumatra - Pepadun",
+                        description: "Gaun upacara putih dan emas yang elegan dari Lampung, mewakili kesucian dan kebangsawanan"
+                    },
+                    jawa: {
+                        title: "Jawa - Beskap",
+                        description: "Pakaian formal pria Jawa dari Solo dan Yogyakarta, kaya akan makna filosofis"
+                    },
+                    kalimantan: {
+                        title: "Kalimantan - Sapei Sapaq",
+                        description: "Pakaian upacara Dayak tradisional dari Kalimantan Timur, dikenakan untuk ritual penting"
+                    },
+                    sulsel: {
+                        title: "Sulawesi Selatan - Baju Bodo",
+                        description: "Gaun wanita Bugis-Makassar yang elegan dengan simbolisme warna unik dan aksesori emas"
+                    },
+                    papua: {
+                        title: "Papua - Koteka",
+                        description: "Pakaian tradisional dari dataran tinggi Papua, terbuat dari bahan alami dengan makna budaya yang mendalam"
+                    }
+                },
+                about: {
+                    title: "Tentang Nusa-Dwipa",
+                    description1: "Nusa-Dwipa adalah game edukasi multiplayer inovatif yang dirancang untuk memperkenalkan pemain pada warisan budaya kaya kepulauan Indonesia. Melalui teknologi imersif, pemain dapat menjelajahi rumah tradisional, mengumpulkan kostum autentik, dan mempelajari budaya beragam yang membentuk Indonesia.",
+                    description2: "Misi kami adalah melestarikan dan mempromosikan warisan budaya Indonesia melalui pengalaman digital interaktif, menjadikan pembelajaran tentang budaya menarik, mudah diakses, dan menyenangkan untuk semua usia.",
+                    tag: {
+                        educational: "Edukatif",
+                        interactive: "Interaktif",
+                        multiplayer: "Multiplayer"
+                    },
+                    cta: {
+                        title: "Siap Menjelajah?",
+                        description: "Bergabunglah dengan ribuan pemain yang menemukan budaya Indonesia",
+                        button: "Masuk ke Game"
+                    }
+                },
+                footer: {
+                    tagline: "Jelajahi & Temukan Nusantara - Game edukasi multiplayer untuk warisan budaya Indonesia",
+                    game: {
+                        title: "Game",
+                        enter: "Masuk Game",
+                        leaderboard: "Peringkat",
+                        features: "Fitur",
+                        culture: "Warisan Budaya"
+                    },
+                    learn: {
+                        title: "Belajar",
+                        houses: "Rumah Tradisional",
+                        costumes: "Kostum Budaya",
+                        history: "Sejarah & Tradisi"
+                    },
+                    connect: {
+                        title: "Terhubung",
+                        about: "Tentang Kami",
+                        contact: "Kontak",
+                        support: "Dukungan"
+                    },
+                    copyright: "© 2024 Nusa-Dwipa. Hak cipta dilindungi."
+                }
+            }
+        };
+
+        // Function to detect user's language automatically
+        function detectLanguage() {
+            // Priority 1: Check if user has saved preference
+            const savedLanguage = localStorage.getItem('language');
+            if (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'id')) {
+                return savedLanguage;
+            }
+
+            // Priority 2: Check browser language
+            const browserLang = navigator.language || navigator.userLanguage;
+            if (browserLang) {
+                const langCode = browserLang.toLowerCase().split('-')[0];
+                if (langCode === 'id') {
+                    return 'id';
+                }
+            }
+
+            // Priority 3: Check timezone for Indonesia
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const indonesianTimezones = [
+                'Asia/Jakarta',    // WIB (Western Indonesia Time)
+                'Asia/Makassar',   // WITA (Central Indonesia Time)
+                'Asia/Jayapura'    // WIT (Eastern Indonesia Time)
+            ];
+            
+            if (indonesianTimezones.includes(timezone)) {
+                return 'id';
+            }
+
+            // Priority 4: Check timezone offset (UTC+7, UTC+8, UTC+9 for Indonesia)
+            const offset = new Date().getTimezoneOffset();
+            const utcOffset = -offset / 60; // Convert to UTC offset in hours
+            if (utcOffset >= 7 && utcOffset <= 9) {
+                // Indonesia is UTC+7, UTC+8, or UTC+9
+                // But we need to be careful as other countries also use these offsets
+                // So we'll combine with browser language check
+                if (browserLang && browserLang.toLowerCase().includes('id')) {
+                    return 'id';
+                }
+            }
+
+            // Default to English
+            return 'en';
+        }
+
+        // Language management
+        let currentLanguage = detectLanguage();
+
+        // Function to get nested translation
+        function getTranslation(key, lang) {
+            const keys = key.split('.');
+            let value = translations[lang];
+            for (const k of keys) {
+                value = value?.[k];
+            }
+            return value || key;
+        }
+
+        // Function to update all translations
+        function updateLanguage(lang) {
+            currentLanguage = lang;
+            localStorage.setItem('language', lang);
+            document.getElementById('htmlLang').setAttribute('lang', lang);
+            document.getElementById('currentLang').textContent = lang.toUpperCase();
+
+            // Update page title and meta description
+            const titleEl = document.getElementById('pageTitle');
+            const descEl = document.getElementById('pageDescription');
+            if (titleEl) {
+                titleEl.textContent = lang === 'id' 
+                    ? 'Nusa-Dwipa - Jelajahi & Temukan Nusantara'
+                    : 'Nusa-Dwipa - Explore & Discover Nusantara';
+            }
+            if (descEl) {
+                descEl.setAttribute('content', lang === 'id'
+                    ? 'Nusa-Dwipa adalah Game Edukasi Multiplayer untuk Memperkenalkan Warisan Budaya Kaya Kepulauan Indonesia'
+                    : 'Nusa-Dwipa is a Multiplayer Educational Game for Introducing The Rich Cultural Heritage of the Indonesian Archipelago');
+            }
+
+            // Update all elements with data-i18n attribute
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                const translation = getTranslation(key, lang);
+                element.textContent = translation;
+            });
+
+            // Update button states for PWA (these have dynamic text)
+            if (typeof updateButtonStates === 'function') {
+                updateButtonStates();
+            }
+        }
+
+        // Initialize language on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Log detected language for debugging (can be removed in production)
+            console.log('[Language] Detected language:', currentLanguage);
+            console.log('[Language] Browser language:', navigator.language);
+            console.log('[Language] Timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+            
+            updateLanguage(currentLanguage);
+
+            // Language toggle button
+            document.getElementById('languageToggle').addEventListener('click', () => {
+                const newLang = currentLanguage === 'en' ? 'id' : 'en';
+                updateLanguage(newLang);
+                console.log('[Language] User switched to:', newLang);
+            });
+        });
+    </script>
+
+    <!-- Smooth scrolling script -->
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Add scroll effect to navigation
+        window.addEventListener('scroll', function() {
+            const nav = document.querySelector('nav');
+            if (window.scrollY > 100) {
+                nav.classList.add('bg-white/95');
+                nav.classList.remove('bg-white/90');
+            } else {
+                nav.classList.add('bg-white/90');
+                nav.classList.remove('bg-white/95');
+            }
+        });
+
+        // Mobile device detection
+        function isMobileDevice() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                   (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) ||
+                   ('ontouchstart' in window) ||
+                   (navigator.maxTouchPoints > 0);
+        }
+
+        // PWA Installation Handler
+        let deferredPrompt;
+        let isPWAInstalled = false;
+
+        // Check if PWA is already installed
+        if (window.matchMedia('(display-mode: standalone)').matches || 
+            window.navigator.standalone === true) {
+            isPWAInstalled = true;
+        }
+
+        // Listen for beforeinstallprompt event
+        window.addEventListener('beforeinstallprompt', (e) => {
+            console.log('[PWA] beforeinstallprompt event fired');
+            // Prevent the mini-infobar from appearing on mobile
+            e.preventDefault();
+            // Stash the event so it can be triggered later
+            deferredPrompt = e;
+            // Update buttons when prompt is available
+            updateButtonStates();
+        });
+
+        // Function to handle PWA installation
+        async function installPWA() {
+            if (!deferredPrompt) {
+                // PWA prompt not available, redirect to auth.html
+                window.location.href = 'auth.html';
+                return;
+            }
+
+            // Show the install prompt
+            deferredPrompt.prompt();
+            
+            // Wait for the user to respond to the prompt
+            const { outcome } = await deferredPrompt.userChoice;
+            
+            if (outcome === 'accepted') {
+                console.log('User accepted the install prompt');
+                // Update button states
+                updateButtonStates(true);
+            } else {
+                console.log('User dismissed the install prompt');
+                // Redirect to auth.html if user dismisses
+                window.location.href = 'auth.html';
+            }
+            
+            // Clear the deferredPrompt
+            deferredPrompt = null;
+        }
+
+        // Function to update button text and behavior
+        function updateButtonStates(installed = false) {
+            const buttons = [
+                document.getElementById('navEnterGameBtn'),
+                document.getElementById('heroEnterGameBtn'),
+                document.getElementById('aboutEnterGameBtn')
+            ];
+
+            // Check if iOS
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            
+            // Get current language
+            const lang = localStorage.getItem('language') || 'en';
+            const isIndonesian = lang === 'id';
+            
+            buttons.forEach(button => {
+                if (button) {
+                    if (installed || isPWAInstalled) {
+                        // PWA already installed - use translations
+                        if (button.id === 'heroEnterGameBtn') {
+                            button.textContent = isIndonesian ? 'Mulai Perjalanan Anda' : 'Start Your Journey';
+                        } else if (button.id === 'aboutEnterGameBtn') {
+                            button.textContent = isIndonesian ? 'Masuk ke Game' : 'Enter the Game';
+                        } else {
+                            button.textContent = isIndonesian ? 'Masuk Game' : 'Enter Game';
+                        }
+                        button.onclick = () => window.location.href = 'auth.html';
+                    } else if (isMobileDevice() && deferredPrompt) {
+                        // Android/Chrome - can install PWA
+                        button.textContent = isIndonesian ? 'Instal Aplikasi' : 'Install App';
+                        button.onclick = installPWA;
+                    } else if (isMobileDevice() && isIOS) {
+                        // iOS - show install instructions
+                        button.textContent = isIndonesian ? 'Tambahkan ke Layar Utama' : 'Add to Home Screen';
+                        button.onclick = () => {
+                            const message = isIndonesian 
+                                ? 'Untuk menginstall aplikasi:\n\n1. Tap tombol Share (kotak dengan panah)\n2. Pilih "Add to Home Screen"\n3. Tap "Add"'
+                                : 'To install the app:\n\n1. Tap the Share button (box with arrow)\n2. Select "Add to Home Screen"\n3. Tap "Add"';
+                            alert(message);
+                            // Still allow navigation
+                            setTimeout(() => {
+                                window.location.href = 'auth.html';
+                            }, 100);
+                        };
+                    } else {
+                        // Desktop or PWA not available - use translations
+                        if (button.id === 'heroEnterGameBtn') {
+                            button.textContent = isIndonesian ? 'Mulai Perjalanan Anda' : 'Start Your Journey';
+                        } else if (button.id === 'aboutEnterGameBtn') {
+                            button.textContent = isIndonesian ? 'Masuk ke Game' : 'Enter the Game';
+                        } else {
+                            button.textContent = isIndonesian ? 'Masuk Game' : 'Enter Game';
+                        }
+                        button.onclick = () => window.location.href = 'auth.html';
+                    }
+                }
+            });
+        }
+
+        // Register Service Worker for PWA
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                // Check if we're on HTTPS or localhost
+                const isSecureContext = window.location.protocol === 'https:' || 
+                                       window.location.hostname === 'localhost' || 
+                                       window.location.hostname === '127.0.0.1';
+                
+                if (!isSecureContext) {
+                    console.warn('[PWA] Service Worker requires HTTPS or localhost');
+                    return;
+                }
+                
+                navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
+                    .then((registration) => {
+                        console.log('[PWA] Service Worker registered successfully:', registration.scope);
+                        
+                        // Check for updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            if (newWorker) {
+                                newWorker.addEventListener('statechange', () => {
+                                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                        console.log('[PWA] New service worker available. Refresh to update.');
+                                    }
+                                });
+                            }
+                        });
+                    })
+                    .catch((error) => {
+                        console.error('[PWA] Service Worker registration failed:', error);
+                    });
+            } else {
+                console.warn('[PWA] Service Workers are not supported in this browser');
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('[PWA] DOM loaded');
+            console.log('[PWA] Is mobile:', isMobileDevice());
+            console.log('[PWA] PWA installed:', isPWAInstalled);
+            console.log('[PWA] Protocol:', window.location.protocol);
+            console.log('[PWA] Hostname:', window.location.hostname);
+            
+            // Register service worker early
+            registerServiceWorker();
+            
+            // Initial button state update
+            updateButtonStates();
+            
+            // Listen for app installed event
+            window.addEventListener('appinstalled', (evt) => {
+                console.log('[PWA] App was installed');
+                isPWAInstalled = true;
+                deferredPrompt = null;
+                updateButtonStates(true);
+            });
+            
+            // Check for PWA installability after a delay (to catch late beforeinstallprompt)
+            setTimeout(() => {
+                console.log('[PWA] Delayed check - Deferred prompt available:', !!deferredPrompt);
+                updateButtonStates();
+            }, 1000);
+            
+            // Additional check after 3 seconds for slow connections
+            setTimeout(() => {
+                console.log('[PWA] Final check - Deferred prompt available:', !!deferredPrompt);
+                updateButtonStates();
+            }, 3000);
+        });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard - Nusa-Dwipa</title>
+    <meta name="description" content="Leaderboard Nusa-Dwipa - Lihat peringkat pemain terbaik">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/assets/image/tittle.png" />
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Firebase -->
+    <script type="module">
+      import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+      import { getFirestore, collection, query, orderBy, limit, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+      
+      const firebaseConfig = {
+        apiKey: "AIzaSyBA4qQj_Mg0Tanfe8nQNLqL33Rtii0ZhqA",
+        authDomain: "nusa-dwipa.firebaseapp.com",
+        databaseURL: "https://nusa-dwipa-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "nusa-dwipa",
+        storageBucket: "nusa-dwipa.firebasestorage.app",
+        messagingSenderId: "231878445619",
+        appId: "1:231878445619:web:ea7b04746f23afd73e7146",
+        measurementId: "G-MZ67EDBKF5"
+      };
+      
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+      
+      function formatTime(seconds) {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        return `${hours.toString().padStart(2, '0')}.${minutes.toString().padStart(2, '0')}.${secs.toString().padStart(2, '0')}`;
+      }
+      
+      async function loadLeaderboard() {
+        const listElement = document.getElementById('leaderboard-list');
+        
+        try {
+          console.log('[Leaderboard] Loading leaderboard from Firestore...');
+          const leaderboardRef = collection(db, 'leaderboard');
+          // Only orderBy score to avoid composite index requirement
+          // We'll sort by time in JavaScript after fetching
+          const q = query(leaderboardRef, orderBy('score', 'desc'), limit(200));
+          const querySnapshot = await getDocs(q);
+          
+          console.log('[Leaderboard] Fetched', querySnapshot.size, 'documents from Firestore');
+          
+          const leaderboard = [];
+          querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            leaderboard.push({
+              id: doc.id,
+              username: data.username || 'Anonymous',
+              score: data.score || 0,
+              time: data.time || 0,
+              createdAt: data.createdAt,
+            });
+          });
+          
+          console.log('[Leaderboard] Processing', leaderboard.length, 'entries');
+          
+          // Sort by score (desc) first, then by time (asc) for same scores
+          leaderboard.sort((a, b) => {
+            if (b.score !== a.score) {
+              return b.score - a.score; // Higher score first
+            }
+            return a.time - b.time; // Lower time first for same score
+          });
+          
+          // Limit to top 100 after sorting
+          const topLeaderboard = leaderboard.slice(0, 100);
+          
+          console.log('[Leaderboard] Displaying top', topLeaderboard.length, 'players');
+          displayLeaderboard(topLeaderboard);
+        } catch (error) {
+          console.error('[Leaderboard] ❌ Error loading leaderboard:', error);
+          listElement.innerHTML = `
+            <div class="text-center py-8">
+              <p class="text-red-500 font-semibold mb-2">Error loading leaderboard</p>
+              <p class="text-gray-600 text-sm">${error.message || 'Please try again later.'}</p>
+              <button onclick="loadLeaderboard()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                🔄 Retry
+              </button>
+            </div>
+          `;
+        }
+      }
+      
+      function displayLeaderboard(leaderboard) {
+        const listElement = document.getElementById('leaderboard-list');
+        
+        if (leaderboard.length === 0) {
+          listElement.innerHTML = `
+            <div class="text-center py-8">
+              <p class="text-gray-500 text-lg mb-2">Belum ada data leaderboard</p>
+              <p class="text-gray-400 text-sm">Jadilah yang pertama menyelesaikan game!</p>
+            </div>
+          `;
+          return;
+        }
+        
+        let html = '';
+        leaderboard.forEach((entry, index) => {
+          const rank = index + 1;
+          const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
+          const rankClass = rank === 1 ? 'bg-yellow-100 border-yellow-300' : 
+                           rank === 2 ? 'bg-gray-100 border-gray-300' : 
+                           rank === 3 ? 'bg-orange-100 border-orange-300' : 
+                           'bg-white border-gray-200';
+          
+          html += `
+            <div class="${rankClass} border-2 rounded-lg p-4 mb-3 shadow-md hover:shadow-lg transition-shadow">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4 flex-1">
+                  <div class="text-2xl font-bold text-gray-700 w-12 text-center">
+                    ${medal} ${rank}
+                  </div>
+                  <div class="flex-1">
+                    <h3 class="font-bold text-lg text-gray-800">${escapeHtml(entry.username || 'Anonymous')}</h3>
+                    <div class="flex gap-4 mt-1 text-sm text-gray-600">
+                      <span>⏱️ ${formatTime(entry.time || 0)}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-2xl font-bold text-blue-600">${entry.score || 0}</div>
+                  <div class="text-xs text-gray-500">poin</div>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+        
+        listElement.innerHTML = html;
+        console.log('[Leaderboard] ✅ Displayed', leaderboard.length, 'entries');
+      }
+      
+      // Helper function to escape HTML
+      function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+      
+      // Load leaderboard when page loads
+      window.addEventListener('DOMContentLoaded', () => {
+        loadLeaderboard();
+      });
+    </script>
+    
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+      
+      * {
+        font-family: 'Poppins', sans-serif;
+      }
+      
+      .gradient-bg {
+        background: linear-gradient(135deg, #3b82f6 0%, #1e40af 50%, #1d4ed8 100%);
+      }
+    </style>
+  </head>
+  <body class="gradient-bg min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+      <!-- Header -->
+      <div class="text-center mb-8">
+        <div class="bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-2xl inline-block mb-4">
+          <img src="/assets/image/logo.png" alt="Nusa-Dwipa Logo" class="w-24 h-auto mx-auto">
+        </div>
+        <h1 class="text-4xl font-bold text-white mb-2 drop-shadow-lg">Leaderboard</h1>
+        <p class="text-white/90 drop-shadow-md">Peringkat Pemain Terbaik</p>
+      </div>
+      
+      <!-- Leaderboard Card -->
+      <div class="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-6 mb-6">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-2xl font-bold text-gray-800">Top Players</h2>
+          <button onclick="loadLeaderboard()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            🔄 Refresh
+          </button>
+        </div>
+        
+        <div id="leaderboard-list" class="space-y-3">
+          <div class="text-center py-8">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p class="mt-2 text-gray-600">Loading leaderboard...</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Back Button -->
+      <div class="text-center">
+        <a href="/room.html" class="inline-block px-6 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors shadow-lg">
+          ← Kembali ke Room
+        </a>
+      </div>
+    </div>
+    
+    <script>
+      // Expose loadLeaderboard to window for refresh button
+      window.loadLeaderboard = () => {
+        window.location.reload();
+      };
+    </script>
+  </body>
+</html>
+
+
+

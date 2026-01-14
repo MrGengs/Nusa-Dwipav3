@@ -1,0 +1,4229 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>NusaDwipa</title>
+    <meta name="description" content="Realistic avatars — Networked-Aframe" />
+
+    <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+    <script src="/collider.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.1/socket.io.min.js"></script>
+    <script src="/easyrtc/easyrtc.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/networked-aframe@0.14.0/dist/networked-aframe.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.5.4/dist/aframe-extras.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aframe-environment-component@1.5.0/dist/aframe-environment-component.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/AdaRoseCannon/aframe-xr-boilerplate@bca4792/simple-navmesh-constraint.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-gltf-model-plus@1.0.0/dist/gltf-model-plus.min.js"></script>
+    
+    <!-- Physics system - using newer version compatible with Three.js r125+ -->
+    <script src="https://cdn.jsdelivr.net/npm/aframe-physics-system@4.2.2/dist/aframe-physics-system.min.js"></script>
+    
+    <!-- Ondel-Ondel NPC Component -->
+    <script src="/ondel-npc.js"></script>
+    <script>
+      // Custom component untuk lock Y position saat di dalam rumah
+      AFRAME.registerComponent('y-position-lock', {
+        schema: {
+          enabled: { type: 'boolean', default: false },
+          targetY: { type: 'number', default: 0 },
+          smoothness: { type: 'number', default: 0.15 } // Smooth transition factor
+        },
+        
+        init: function() {
+          this.lastPosition = new THREE.Vector3();
+          this.currentTargetY = 0;
+          this.isTransitioning = false;
+        },
+        
+        update: function(oldData) {
+          // Only update target if it actually changed
+          if (oldData.targetY !== this.data.targetY) {
+            this.currentTargetY = this.data.targetY;
+          }
+          
+          // If disabled, stop transitioning
+          if (!this.data.enabled) {
+            this.isTransitioning = false;
+          }
+        },
+        
+        tick: function() {
+          if (!this.data.enabled) return;
+          
+          const currentPos = this.el.getAttribute('position');
+          const currentY = typeof currentPos === 'string' 
+            ? parseFloat(currentPos.split(/\s+/)[1]) 
+            : (currentPos?.y || 0);
+          
+          const diff = Math.abs(currentY - this.currentTargetY);
+          
+          // Only adjust if difference is significant (more than 0.1)
+          if (diff > 0.1) {
+            this.isTransitioning = true;
+            
+            // Smooth interpolation instead of instant snap
+            const newY = currentY + (this.currentTargetY - currentY) * this.data.smoothness;
+            
+            // Only update if the change is meaningful
+            if (Math.abs(newY - currentY) > 0.01) {
+              const posObj = typeof currentPos === 'string' 
+                ? {
+                    x: parseFloat(currentPos.split(/\s+/)[0]) || 0,
+                    y: newY,
+                    z: parseFloat(currentPos.split(/\s+/)[2]) || 0
+                  }
+                : {
+                    x: currentPos?.x || 0,
+                    y: newY,
+                    z: currentPos?.z || 0
+                  };
+              
+              this.el.setAttribute('position', posObj);
+              this.el.object3D.position.set(posObj.x, posObj.y, posObj.z);
+            }
+          } else {
+            this.isTransitioning = false;
+          }
+        }
+      });
+    </script>
+    <script>
+      window.uiSettings = {
+        showRandomAvatarButton: true,
+        showDieButton: true,
+      };
+      // Flag to indicate this is convert.html (single-player experience)
+      window.__isConvertPage = true;
+      window.__soloMode = true; // Also set solo mode flag for timer
+    </script>
+    <script src="/dist/components.js"></script>
+    <script defer src="/dist/ui.js"></script>
+    
+    <!-- Loading Screen Styles -->
+    <style>
+      #loading-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #3b82f6 0%, #1e40af 50%, #1d4ed8 100%);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        font-family: 'Arial', sans-serif;
+        transition: opacity 0.5s ease, visibility 0.5s ease;
+      }
+      
+      #loading-screen.hidden {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        z-index: -1 !important;
+      }
+      
+      .loading-container {
+        text-align: center;
+        max-width: 400px;
+        width: 90%;
+        padding: 20px;
+      }
+      
+      .logo-container {
+        width: 220px;
+        aspect-ratio: 16 / 9;
+        margin: 0 auto 20px;
+        background: white;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      }
+      
+      .logo-container img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+      
+      #loading-text {
+        color: white;
+        font-size: 24px;
+        font-weight: 600;
+        margin-bottom: 10px;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      }
+      
+      .progress-container {
+        width: 100%;
+        height: 8px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 10px;
+        overflow: hidden;
+        margin-bottom: 10px;
+      }
+      
+      #progress-bar {
+        width: 0%;
+        height: 100%;
+        background: linear-gradient(90deg, #fbbf24, #f59e0b, #fbbf24);
+        border-radius: 10px;
+        transition: width 0.3s ease;
+      }
+      
+      #loading-progress {
+        color: white;
+        font-size: 32px;
+        font-weight: 700;
+        margin-bottom: 10px;
+      }
+      
+      #loading-status {
+        color: rgba(255,255,255,0.9);
+        font-size: 14px;
+        margin-top: 10px;
+      }
+      
+      /* SIMPLE CSS: Only set z-index for panels, don't interfere with display/visibility */
+      /* Top navbar is 100001, so panels from bottom navbar must be higher (100020) */
+      /* Target all fixed right-side panels (backpack, chat, users, quiz, etc.) */
+      div.fixed.inset-y-0.right-0:not(.naf-top-bar-right):not(.naf-bottom-bar-center) {
+        z-index: 100020 !important;
+      }
+      
+      /* Catch variations with different class orders */
+      div[class*="fixed"][class*="inset-y-0"][class*="right-0"]:not(.naf-top-bar-right):not(.naf-bottom-bar-center) {
+        z-index: 100020 !important;
+      }
+      
+      /* Catch panels with z-50 class (Tailwind default) */
+      div.fixed.inset-y-0.right-0.z-50:not(.naf-top-bar-right):not(.naf-bottom-bar-center) {
+        z-index: 100020 !important;
+      }
+      
+      /* Settings screen */
+      .naf-centered-fullscreen {
+        z-index: 100020 !important;
+      }
+      
+      /* Item detail modal - simple, only z-index */
+      [class*="z-[60]"] {
+        z-index: 100020 !important;
+      }
+      
+      [class*="z-[60]"] .bg-white.rounded-2xl {
+        z-index: 100021 !important;
+      }
+      
+      /* Ensure bottom navbar is always clickable and visible */
+      .naf-bottom-bar-center,
+      div.naf-bottom-bar-center,
+      .naf-bottom-bar-center.hidden,
+      div.naf-bottom-bar-center.hidden,
+      .naf-bottom-bar-center[style*="display: none"],
+      div.naf-bottom-bar-center[style*="display: none"],
+      .naf-bottom-bar-center[style*="visibility: hidden"],
+      div.naf-bottom-bar-center[style*="visibility: hidden"] {
+        z-index: 100001 !important;
+        position: fixed !important;
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        bottom: 20px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+      }
+      
+      /* Prevent navbar from being hidden by any means */
+      .naf-bottom-bar-center[hidden],
+      div.naf-bottom-bar-center[hidden] {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+      }
+      
+      /* Ensure all buttons in bottom navbar are clickable */
+      .naf-bottom-bar-center button,
+      .naf-bottom-bar-center .btn,
+      .naf-bottom-bar-center .btn-secondary,
+      .naf-bottom-bar-center .btn-rounded,
+      div.naf-bottom-bar-center button,
+      div.naf-bottom-bar-center .btn {
+        pointer-events: auto !important;
+        cursor: pointer !important;
+        z-index: 100002 !important;
+        position: relative !important;
+      }
+      
+      /* Ensure top navbar is always clickable and visible */
+      .naf-top-bar-right,
+      div.naf-top-bar-right {
+        z-index: 100001 !important;
+        position: fixed !important;
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        top: 20px !important;
+        right: 20px !important;
+      }
+      
+      /* Ensure all buttons in top navbar are clickable */
+      .naf-top-bar-right button,
+      .naf-top-bar-right .btn,
+      div.naf-top-bar-right button,
+      div.naf-top-bar-right .btn {
+        pointer-events: auto !important;
+        cursor: pointer !important;
+        z-index: 100002 !important;
+        position: relative !important;
+      }
+      
+      /* SIMPLE: Only z-index, nothing else */
+      /* Settings screen */
+      .naf-centered-fullscreen {
+        z-index: 100020 !important;
+      }
+      
+      /* Item detail modal */
+      div.fixed.inset-0.bg-black\/50.z-\[60\],
+      div[class*="z-[60]"] {
+        z-index: 100020 !important;
+      }
+      
+      div[class*="z-[60]"] .bg-white.rounded-2xl {
+        z-index: 100021 !important;
+      }
+      
+      /* CRITICAL: GameHUD harus selalu terlihat meskipun settings dibuka */
+      /* GameHUD z-index lebih tinggi dari settings (100020) */
+      /* CRITICAL: Posisi tetap (20px, 20px) untuk mencegah getaran */
+      [data-gamehud],
+      div[data-gamehud] {
+        z-index: 100021 !important;
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: fixed !important;
+        left: 20px !important;
+        top: 20px !important;
+        transform: none !important;
+        pointer-events: auto !important;
+        will-change: auto !important;
+      }
+      
+      /* Pastikan GameHUD tidak tersembunyi oleh settings screen */
+      .naf-centered-fullscreen ~ [data-gamehud],
+      .naf-centered-fullscreen + [data-gamehud],
+      body > [data-gamehud] {
+        z-index: 100021 !important;
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        left: 20px !important;
+        top: 20px !important;
+        transform: none !important;
+      }
+      
+      /* Avatar Selection Screen Styles */
+      #avatar-selection-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+        font-family: 'Arial', sans-serif;
+        overflow-y: auto;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+      
+      #avatar-selection-screen.show {
+        display: flex;
+      }
+      
+      .avatar-selection-container {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        padding: 30px;
+        max-width: 800px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      }
+      
+      .avatar-selection-title {
+        font-size: 32px;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 10px;
+        color: #1e293b;
+      }
+      
+      .avatar-selection-subtitle {
+        font-size: 16px;
+        text-align: center;
+        margin-bottom: 30px;
+        color: #64748b;
+      }
+      
+      .avatar-options {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 15px;
+        margin-bottom: 30px;
+      }
+      
+      .avatar-option {
+        position: relative;
+        aspect-ratio: 1;
+        border-radius: 12px;
+        overflow: hidden;
+        cursor: pointer;
+        border: 3px solid transparent;
+        transition: all 0.3s ease;
+        background: #f1f5f9;
+      }
+      
+      .avatar-option:hover {
+        transform: scale(1.05);
+        border-color: #3b82f6;
+        box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+      }
+      
+      .avatar-option.selected {
+        border-color: #10b981;
+        box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
+      }
+      
+      .avatar-option img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      
+      .avatar-option-label {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 5px;
+        font-size: 11px;
+        text-align: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+      
+      .avatar-option:hover .avatar-option-label {
+        opacity: 1;
+      }
+      
+      .enter-game-button {
+        width: 100%;
+        padding: 15px 30px;
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 18px;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      
+      .enter-game-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
+        background: linear-gradient(135deg, #059669, #047857);
+      }
+      
+      .enter-game-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+      }
+      
+      @media (max-width: 768px) {
+        .avatar-selection-container {
+          padding: 20px;
+        }
+        
+        .avatar-selection-title {
+          font-size: 24px;
+        }
+        
+        .avatar-options {
+          grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+          gap: 10px;
+        }
+        
+        .enter-game-button {
+          padding: 12px 20px;
+          font-size: 16px;
+        }
+      }
+      
+      /* Virtual Joystick Styles */
+      #virtual-joystick {
+        position: fixed !important;
+        bottom: 30px !important;
+        left: 30px !important;
+        width: 120px !important;
+        height: 120px !important;
+        z-index: 998 !important;
+        display: none !important;
+        pointer-events: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        transition: opacity 0.3s ease !important;
+      }
+      
+      #virtual-joystick.active {
+        display: block !important;
+        pointer-events: all !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+      }
+      
+      #joystick-base {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: rgba(0, 0, 0, 0.3);
+        border: 3px solid rgba(255, 255, 255, 0.4);
+        backdrop-filter: blur(10px);
+        box-shadow: 
+          0 4px 15px rgba(0, 0, 0, 0.3),
+          inset 0 2px 5px rgba(255, 255, 255, 0.1);
+        position: relative;
+        touch-action: none;
+      }
+      
+      #joystick-stick {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
+        border: 2px solid rgba(255, 255, 255, 0.5);
+        box-shadow: 
+          0 4px 12px rgba(59, 130, 246, 0.5),
+          inset 0 2px 5px rgba(255, 255, 255, 0.3);
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        transition: transform 0.1s ease-out;
+        touch-action: none;
+        pointer-events: none;
+      }
+      
+      #joystick-stick.active {
+        transition: none;
+      }
+      
+      /* Mobile responsive - show joystick on touch devices */
+      @media (max-width: 768px) {
+        #virtual-joystick {
+          bottom: 25px;
+          left: 25px;
+          width: 110px;
+          height: 110px;
+        }
+        
+        #joystick-stick {
+          width: 45px;
+          height: 45px;
+        }
+      }
+      
+      @media (max-width: 480px) {
+        #virtual-joystick {
+          bottom: 20px;
+          left: 20px;
+          width: 100px;
+          height: 100px;
+        }
+        
+        #joystick-stick {
+          width: 40px;
+          height: 40px;
+        }
+      }
+      
+      /* Hide joystick on desktop (non-touch devices) */
+      @media (hover: hover) and (pointer: fine) {
+        #virtual-joystick {
+          display: none !important;
+        }
+      }
+      
+      /* Show joystick only on touch devices */
+      @media (hover: none) and (pointer: coarse) {
+        #virtual-joystick.active {
+          display: block !important;
+        }
+      }
+      
+      /* Safe area for joystick */
+      @supports (padding: max(0px)) {
+        #virtual-joystick {
+          bottom: max(30px, env(safe-area-inset-bottom, 30px));
+          left: max(30px, env(safe-area-inset-left, 30px));
+        }
+        
+        @media (max-width: 768px) {
+          #virtual-joystick {
+            bottom: max(25px, env(safe-area-inset-bottom, 25px));
+            left: max(25px, env(safe-area-inset-left, 25px));
+          }
+        }
+        
+        @media (max-width: 480px) {
+          #virtual-joystick {
+            bottom: max(20px, env(safe-area-inset-bottom, 20px));
+            left: max(20px, env(safe-area-inset-left, 20px));
+          }
+        }
+      }
+      
+      /* Prevent canvas/scene from being hidden after game starts */
+      .scene-container[data-game-started="true"],
+      .scene-container.ready {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        z-index: 1 !important;
+      }
+      
+      a-scene[data-game-started="true"] {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+      }
+      
+      a-scene[data-game-started="true"] canvas,
+      canvas[data-game-started="true"] {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Virtual Joystick for Mobile -->
+    <div id="virtual-joystick">
+      <div id="joystick-base">
+        <div id="joystick-stick"></div>
+      </div>
+    </div>
+    
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+      <div class="loading-container">
+        <div class="logo-container">
+          <img src="/assets/image/logo.png" alt="Nusa Dwipa Logo" />
+        </div>
+        <div id="loading-text">Memuat Nusa-Dwipa...</div>
+        <div class="progress-container">
+          <div id="progress-bar"></div>
+        </div>
+        <div id="loading-progress">0%</div>
+        <div id="loading-status">Menyiapkan dunia...</div>
+      </div>
+    </div>
+    
+    <!-- Avatar Selection Screen -->
+    <div id="avatar-selection-screen">
+      <div class="avatar-selection-container">
+        <h1 class="avatar-selection-title">Pilih Karakter Anda</h1>
+        <p class="avatar-selection-subtitle">Pilih avatar yang akan mewakili Anda di dunia Nusa-Dwipa</p>
+        <div class="avatar-options" id="avatar-options">
+          <!-- Avatars will be loaded here -->
+        </div>
+        <button id="enter-game-btn" class="enter-game-button" disabled>
+          Masuk ke Game
+        </button>
+      </div>
+    </div>
+    <!--
+      To enable microphone, set the following settings in networked-scene below:
+
+        adapter: easyrtc;
+        audio: true;
+
+      and set networked-audio-source on the avatar-template template
+    -->
+    <!-- Scene Container - Hidden until user enters game -->
+    <div class="scene-container" style="display: none; visibility: hidden; opacity: 0; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;">
+      <a-scene
+        light="defaultLightsEnabled:false"
+        renderer="stencil:true; antialias:true; colorManagement:true; physicallyCorrectLights:true; maxCanvasWidth:1920; maxCanvasHeight:1920"
+        physics="driver: local; gravity: -9.8"
+        networked-scene="
+          connectOnLoad: false;
+          room: forest;
+          debug: true;
+          adapter: wseasyrtc;
+          audio: false;
+          video: false;
+      "
+        shadow="type: basic"
+        gltf-model="meshoptDecoderPath:https://unpkg.com/meshoptimizer@0.19.0/meshopt_decoder.js"
+        raycaster="far: 50; objects: .clickable,[link];"
+        cursor="rayOrigin: mouse"
+        loading-screen="enabled: false"
+      >
+      <a-assets>
+        <template id="avatar-template">
+          <a-entity player-info>
+            <a-entity class="model" position="0 0 0">
+              <!-- here we add a text component for a nametag; the value will be updated by the player-info component -->
+              <a-text class="nametag" align="center" value="?" position="0 2.1 0" scale=".5 .5 .5"></a-text>
+            </a-entity>
+            <a-entity class="camera" position="0 1.6 0"></a-entity>
+            <!-- <a-entity class="camera" position="0 1.6 0" networked-audio-source></a-entity> -->
+          </a-entity>
+        </template>
+        <img id="thumbForest" crossorigin="anonymous" src="https://cdn.aframe.io/link-traversal/thumbs/forest.png" />
+        
+        <!-- Baju Adat Images -->
+        <img id="baju-sumbar" crossorigin="anonymous" src="/assets/baju_adat/basumbar.png" />
+        <img id="baju-papua" crossorigin="anonymous" src="/assets/baju_adat/bapapua.png" />
+        <img id="baju-aceh" crossorigin="anonymous" src="/assets/baju_adat/baaceh.png" />
+        <img id="baju-batak" crossorigin="anonymous" src="/assets/baju_adat/babatak.png" />
+        <img id="baju-lampung" crossorigin="anonymous" src="/assets/baju_adat/basumatra.png" />
+        <img id="baju-dayak" crossorigin="anonymous" src="/assets/baju_adat/badayak.png" />
+        <img id="baju-bali" crossorigin="anonymous" src="/assets/baju_adat/babali.png" />
+        <img id="baju-jawa" crossorigin="anonymous" src="/assets/baju_adat/bajawa.png" />
+        <img id="baju-sulteng" crossorigin="anonymous" src="/assets/baju_adat/batolitoli.png" />
+        <img id="baju-sulsel" crossorigin="anonymous" src="/assets/baju_adat/basulsel.png" />
+        <img id="baju-kalbar" crossorigin="anonymous" src="/assets/baju_adat/bakalbar.png" />
+        
+        <!-- Background Music -->
+        <audio id="background-music" src="/assets/backsound/gamelan.mp3" preload="auto" loop></audio>
+      </a-assets>
+
+      <a-entity id="scene">
+        <!-- Dunia dasar menggunakan world.glb sebagai base environment -->
+        <!-- Class environmentGround dan environmentDressing digunakan untuk collision/navmesh constraint -->
+        <!-- Scale diperbesar untuk membuat dunia lebih luas -->
+        <!-- Model dunia utama dengan collision - OPTIMIZED -->
+        <a-entity
+          gltf-model="url(/assets/world.glb)"
+          class="environmentGround environmentDressing"
+          scale="4 4 4"
+          shadow="receive:true"
+          nav-mesh
+          static-body="shape: box; mass: 0"
+        ></a-entity>
+        <!-- Model koridor dengan collision - OPTIMIZED -->
+        <a-entity
+          gltf-model="url(/assets/koridor2.glb)"
+          position="58 -0.1 0"
+          scale="1 1 1"
+          rotation="0 90 0"
+          class="environmentGround environmentDressing"
+          shadow="receive:true"
+          nav-mesh
+          static-body="shape: box; mass: 0"
+        ></a-entity>
+
+        <!-- Multiplayer lobby staging area -->
+        <a-entity
+          id="multiplayer-lobby"
+          gltf-model="url(/assets/lobby.glb)"
+          position="120 0 120"
+          scale="1 1 1"
+          rotation="0 135 0"
+          class="environmentGround environmentDressing lobby-area"
+          shadow="receive:true"
+          nav-mesh
+          static-body="shape: box; mass: 0"
+        ></a-entity>
+        
+        <!-- Lobby boundary walls (invisible) to prevent players from leaving -->
+        <!-- Front wall -->
+        <a-box
+          position="120 5 135"
+          width="30"
+          height="10"
+          depth="1"
+          material="opacity: 0; transparent: true"
+          static-body="shape: box; mass: 0"
+          class="lobby-boundary"
+        ></a-box>
+        <!-- Back wall -->
+        <a-box
+          position="120 5 105"
+          width="30"
+          height="10"
+          depth="1"
+          material="opacity: 0; transparent: true"
+          static-body="shape: box; mass: 0"
+          class="lobby-boundary"
+        ></a-box>
+        <!-- Left wall -->
+        <a-box
+          position="105 5 120"
+          width="1"
+          height="10"
+          depth="30"
+          material="opacity: 0; transparent: true"
+          static-body="shape: box; mass: 0"
+          class="lobby-boundary"
+        ></a-box>
+        <!-- Right wall -->
+        <a-box
+          position="135 5 120"
+          width="1"
+          height="10"
+          depth="30"
+          material="opacity: 0; transparent: true"
+          static-body="shape: box; mass: 0"
+          class="lobby-boundary"
+        ></a-box>
+
+        <a-entity light="type:ambient;intensity:0.7"></a-entity>
+        <a-entity light="type:directional;intensity:0.5;castShadow:true" position="2 4 2"></a-entity>
+
+        <!-- ===== RUMAH ADAT NUSANTARA ===== -->
+        <!-- Rumah-rumah ditata di sepanjang sisi atas dan bawah koridor horizontal -->
+        <!-- Setiap rumah memiliki collision agar player tidak bisa menembus -->
+
+        <!-- SISI ATAS KORIDOR (Z negatif) -->
+
+        <!-- Rumah Panjang Kalbar (sebelah kiri Honai) -->
+        <a-entity
+          id="rumah-panjang-kalbar"
+          gltf-model="url(/assets/rumah_adat/rumah_panjang_kalbar.glb)"
+          position="-70 -0.4 20"
+          scale="1.5 1.5 1.5"
+          rotation="0 180 0"
+          shadow="cast:false;receive:true"
+          class="environmentGround environmentDressing collidable"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+
+        <!-- Portal Masuk Rumah Panjang Kalbar -->
+        <a-entity
+          position="-70 -0.40 0"
+          teleport-portal="targetPosition: -70 2.9 20; triggerDistance: 0.5; portalType: entrance"
+          portal-hole="width: 3; height: 3; depth: 2"
+        ></a-entity>
+
+        <!-- Portal Keluar Rumah Panjang Kalbar (dipindahkan lebih jauh dari spawn) -->
+        <a-entity
+          position="-70 3 33"
+          teleport-portal="targetPosition: -64.32 -0.10 0; triggerDistance: 1.5; portalType: exit"
+        ></a-entity>
+
+        <!-- Collision Floor untuk Rumah Panjang Kalbar -->
+        <a-box
+          position="-65 2.8 20"
+          width="30"
+          height="0.5"
+          depth="30"
+          material="opacity: 0; transparent: true; visible: false"
+          class="collidable environmentGround"
+          static-body="shape: box; mass: 0"
+          nav-mesh
+        ></a-box>
+        
+        <!-- Collision Floor tambahan di area spawn untuk stabilitas -->
+        <a-box
+          position="-70 2.8 20"
+          width="10"
+          height="0.5"
+          depth="10"
+          material="opacity: 0; transparent: true; visible: false"
+          class="collidable environmentGround"
+          static-body="shape: box; mass: 0"
+          nav-mesh
+        ></a-box>
+
+        <!-- Display Baju Adat Kalimantan Barat King Baba -->
+        <a-entity 
+          position="-70 7 28"
+          rotation="0 200 0"
+          collectible-item="
+            itemId: baju-king-baba-kalbar;
+            itemName: Baju Adat Kalimantan Barat King Baba;
+            itemDescription: Baju adat King Baba adalah pakaian kebesaran laki-laki dari Kalimantan Barat yang melambangkan kewibawaan dan status sosial tinggi dalam masyarakat Dayak;
+            itemImage: /assets/baju_adat/bakalbar.png;
+            itemCategory: costume;
+            collectDistance: 4;
+          "
+          static-body="shape: box"
+        >
+          <a-plane 
+            src="#baju-kalbar"
+            width="1.6" 
+            height="2.1" 
+            position="0 -3 0"
+            material="transparent:true; alphaTest:0.5; side:double; shader:flat; emissive:#ffffff; emissiveIntensity:0.3"
+          ></a-plane>
+          <a-ring
+            color="#FFD700"
+            radius-inner="1.0"
+            radius-outer="1.2"
+            position="0 -4 0"
+            rotation="-90 0 0"
+            material="shader:flat; transparent:true; opacity:1; emissive:#FFD700; emissiveIntensity:0.8"
+            animation="property: scale; from: 0.95 0.95 0.95; to: 1.15 1.15 1.15; to: 0.95 0.95 0.95; dur: 2000; dir: alternate; easing: easeInOutSine; loop: true"
+          ></a-ring>
+        </a-entity>
+
+        <!-- Rumah Honai - Papua (atas kiri) - OPTIMIZED -->
+        <a-entity
+          id="rumah-honai-papua"
+          gltf-model="url(/assets/rumah_adat/rumah_honai_papua.glb)"
+          position="-53 -0.39 -15"
+          scale="1 1 1"
+          rotation="0 90 0"
+          shadow="cast:false;receive:true"
+          class="environmentGround environmentDressing collidable"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+
+        <!-- Portal Masuk Rumah Honai Papua (di depan rumah) -->
+        <a-entity
+          position="-57.2 -0.3 -24.2"
+          teleport-portal="targetPosition: -58.5 -0.3 -25; triggerDistance: 0.5; portalType: entrance"
+          portal-hole="width: 3; height: 3; depth: 2"
+        ></a-entity>
+
+        <!-- Portal Keluar Rumah Honai Papua (di dalam rumah) -->
+        <a-entity
+          position="-57.2 -0.3 -25"
+          teleport-portal="targetPosition: -52 -0.3 -15; triggerDistance: 0.5; portalType: exit"
+        ></a-entity>
+
+        <!-- DISPLAY BAJU ADAT PAPUA - di dalam rumah Honai Papua -->
+        <a-entity 
+          position="-58.5 3.2 -26.5"
+          rotation="0 200 0"
+          collectible-item="
+            itemId: baju-koteka-papua;
+            itemName: Pakaian Koteka dari Papua;
+            itemDescription: Pakaian Adat Koteka dan Rok Rumbai adalah busana tradisional yang identik dengan masyarakat adat di wilayah Pegunungan Tengah Papua (seperti Suku Dani, Lani, dan Yali), terkenal karena kesederhanaan bahan alamnya dan sarat akan makna status sosial.;
+            itemImage: /assets/baju_adat/bapapua.png;
+            itemCategory: costume;
+            collectDistance: 7;
+          "
+          static-body="shape: box"
+        >
+          <a-plane 
+            src="#baju-papua"
+            width="1.5" 
+            height="2" 
+            position="0 -3 0"
+            material="transparent:true; alphaTest:0.5; side:double; shader:flat; emissive:#ffffff; emissiveIntensity:0.3"
+          ></a-plane>
+          <a-ring
+            color="#FFD700"
+            radius-inner="1.0"
+            radius-outer="1.2"
+            position="0 -4 0"
+            rotation="-90 0 0"
+            material="shader:flat; transparent:true; opacity:1; emissive:#FFD700; emissiveIntensity:0.8"
+            animation="property: scale; from: 0.95 0.95 0.95; to: 1.15 1.15 1.15; to: 0.95 0.95 0.95; dur: 2000; dir: alternate; easing: easeInOutSine; loop: true"
+          ></a-ring>
+        </a-entity>
+
+        <a-entity
+          gltf-model="url(/assets/rumah_adat/rumah_honai_papua.glb)"
+          position="-47 -0.39 -21"
+          scale="1 1 1"
+          rotation="0 90 0"
+          shadow="cast:false;receive:true"
+          class="environmentGround environmentDressing collidable"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+        <a-entity
+          gltf-model="url(/assets/rumah_adat/rumah_honai_papua.glb)"
+          position="-40 -0.39 -15"
+          scale="1 1 1"
+          rotation="0 90 0"
+          shadow="cast:false;receive:true"
+          class="environmentGround environmentDressing collidable"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+
+        <!-- Rumah Krong - Aceh (atas tengah) -->
+        <a-entity
+          gltf-model="url(/assets/rumah_adat/rumah_krong_aceh.glb)"
+          position="-40 -0.5 13.9"
+          scale="0.3 0.3 0.3"
+          rotation="0 90 0"
+          shadow="cast:false;receive:true"
+          class="environmentGround environmentDressing collidable"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+
+        <!-- Portal Masuk Rumah Krong Aceh (di depan rumah) -->
+        <a-entity
+          position="-47.5 0 0"
+          teleport-portal="targetPosition: -47 3 10; triggerDistance: 0.5; portalType: entrance"
+          portal-hole="width: 3; height: 3; depth: 2"
+        ></a-entity>
+
+        <!-- Portal Keluar Rumah Krong Aceh (di dalam rumah) -->
+        <a-entity
+          position="-47 3 9"
+          teleport-portal="targetPosition: -47.5 0 -2; triggerDistance: 0.5; portalType: exit"
+        ></a-entity>
+
+        <!-- Collision Floor untuk Rumah Krong Aceh (spawn Y: 2.5) -->
+        <a-box
+          position="-44 2.9 20"
+          width="30"
+          height="0.5"
+          depth="30"
+          material="opacity: 0; transparent: true; visible: false"
+          class="collidable environmentGround"
+          static-body="shape: box; mass: 0"
+          nav-mesh
+        ></a-box>
+
+        <!-- DISPLAY PAKAIAN ADAT ULEE BALANG - di dalam rumah Krong Aceh -->
+        <a-entity 
+          position="-47 6.8 9"
+          rotation="0 270 0"
+          collectible-item="
+            itemId: baju-ulee-balang-aceh;
+            itemName: Pakaian Ulee Balang dari Aceh;
+            itemDescription: Pakaian Adat Ulee Balang adalah busana tradisional khas Aceh yang melambangkan kebesaran, kemuliaan, dan status sosial tinggi, yang pada masa kesultanan hanya dikenakan oleh golongan bangsawan (Ulee Balang). Kini, pakaian ini populer sebagai busana pernikahan adat.;
+            itemImage: /assets/baju_adat/baaceh.png;
+            itemCategory: costume;
+            collectDistance: 4;
+          "
+          static-body="shape: box"
+        >
+          <a-plane 
+            src="#baju-aceh"
+            width="1.5" 
+            height="2" 
+            position="0 -3 0"
+            material="transparent:true; alphaTest:0.5; side:double; shader:flat; emissive:#ffffff; emissiveIntensity:0.3"
+          ></a-plane>
+          <a-ring
+            color="#FFD700"
+            radius-inner="1.0"
+            radius-outer="1.2"
+            position="0 -4 0"
+            rotation="-90 0 0"
+            material="shader:flat; transparent:true; opacity:1; emissive:#FFD700; emissiveIntensity:0.8"
+            animation="property: scale; from: 0.95 0.95 0.95; to: 1.15 1.15 1.15; to: 0.95 0.95 0.95; dur: 2000; dir: alternate; easing: easeInOutSine; loop: true"
+          ></a-ring>
+        </a-entity>
+
+        <!-- Rumah Batak - Sumatra Utara (sebelah kanan Krong Aceh) -->
+        <a-entity
+          gltf-model="url(/assets/rumah_adat/rumah_batak_sumut.glb)"
+          position="-80 -0.40 -18"
+          scale="1 1 1"
+          rotation="0 0 0"
+          shadow="cast:false;receive:true"
+          class="environmentGround environmentDressing collidable"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+
+        <!-- Portal Masuk Rumah Batak -->
+        <a-entity
+          position="-77.51 -0.40 -17.42"
+          teleport-portal="targetPosition: -77.51 1.7 -21; triggerDistance: 0.5; portalType: entrance"
+          portal-hole="width: 3; height: 3; depth: 2"
+        ></a-entity>
+
+        <!-- Portal Keluar Rumah Batak -->
+        <a-entity
+          position="-77.51 1.7 -20"
+          teleport-portal="targetPosition: -80 -0.10 -15; triggerDistance: 0.5; portalType: exit"
+        ></a-entity>
+
+        <!-- Collision Floor untuk Rumah Batak (spawn Y: 2.5) -->
+        <a-box
+          position="-77.51 2.4 -21"
+          width="15"
+          height="0.5"
+          depth="15"
+          material="opacity: 0; transparent: true; visible: false"
+          class="collidable environmentGround"
+          static-body="shape: box; mass: 0"
+          nav-mesh
+        ></a-box>
+
+        <!-- Display Baju Adat Batak -->
+        <a-entity 
+          position="-77.38 5.6 -26"
+          rotation="0 250 0"
+          collectible-item="
+            itemId: baju-ulos-batak-sumut;
+            itemName: Pakaian Ulos Batak Sumatra Utara;
+            itemDescription: Busana adat Batak dipadukan dengan kain Ulos sebagai simbol restu dan kehangatan yang wajib ada di setiap upacara adat penting masyarakat Sumatra Utara;
+            itemImage: /assets/baju_adat/babatak.png;
+            itemCategory: costume;
+            collectDistance: 4;
+          "
+          static-body="shape: box"
+        >
+          <a-plane 
+            src="#baju-batak"
+            width="1.6" 
+            height="2.1" 
+            position="0 -3 0"
+            material="transparent:true; alphaTest:0.5; side:double; shader:flat; emissive:#ffffff; emissiveIntensity:0.3"
+          ></a-plane>
+          <a-ring
+            color="#FFD700"
+            radius-inner="1.0"
+            radius-outer="1.2"
+            position="0 -4 0"
+            rotation="-90 0 0"
+            material="shader:flat; transparent:true; opacity:1; emissive:#FFD700; emissiveIntensity:0.8"
+            animation="property: scale; from: 0.95 0.95 0.95; to: 1.15 1.15 1.15; to: 0.95 0.95 0.95; dur: 2000; dir: alternate; easing: easeInOutSine; loop: true"
+          ></a-ring>
+        </a-entity>
+
+        <!-- Rumah Lampung - Sumatra (atas kanan) -->
+        <a-entity
+          gltf-model="url(/assets/rumah_adat/rumah_lampung_sumatra.glb)"
+          position="-25 -0.39 -17"
+          scale="2 2 2"
+          rotation="0 0 0"
+          shadow="cast:false;receive:true"
+          class="environmentGround environmentDressing collidable"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+
+        <!-- Portal Masuk Rumah Lampung Sumatra (di depan rumah) -->
+        <a-entity
+          position="-16 0 -17"
+          teleport-portal="targetPosition: -21 3 -26; triggerDistance: 0.5; portalType: entrance"
+          portal-hole="width: 3; height: 3; depth: 2"
+        ></a-entity>
+
+        <!-- Portal Keluar Rumah Lampung Sumatra (di dalam rumah) -->
+        <a-entity
+          position="-21 3.5 -23.5"
+          teleport-portal="targetPosition: -25 0 -15; triggerDistance: 0.5; portalType: exit"
+        ></a-entity>
+
+        <!-- Collision Floor untuk Rumah Lampung Sumatra -->
+        <a-box
+          position="-21 2.9 -26"
+          width="15"
+          height="0.5"
+          depth="15"
+          material="opacity: 0; transparent: true; visible: false"
+          class="collidable environmentGround"
+          static-body="shape: box; mass: 0"
+          nav-mesh
+        ></a-box>
+
+        <!-- DISPLAY PAKAIAN ADAT PEPADUN - di dalam rumah Lampung Sumatra -->
+        <a-entity 
+          position="-21 7.5 -37"
+          rotation="0 180 0"
+          collectible-item="
+            itemId: baju-pepadun-lampung;
+            itemName: Pakaian Pepadun dari Sumatra;
+            itemDescription: Pakaian Adat Pepadun adalah busana kebesaran dari masyarakat Lampung yang menganut sistem adat Pepadun (dataran tinggi/pedalaman). Pakaian ini secara umum berwarna putih dan emas, melambangkan kesucian dan kemuliaan, serta sering dikenakan sebagai busana pengantin.;
+            itemImage: /assets/baju_adat/basumatra.png;
+            itemCategory: costume;
+            collectDistance: 4;
+          "
+          static-body="shape: box"
+        >
+          <a-plane 
+            src="#baju-lampung"
+            width="1.5" 
+            height="2" 
+            position="0 -3 0"
+            material="transparent:true; alphaTest:0.5; side:double; shader:flat; emissive:#ffffff; emissiveIntensity:0.3"
+          ></a-plane>
+          <a-ring
+            color="#FFD700"
+            radius-inner="1.0"
+            radius-outer="1.2"
+            position="0 -4 0"
+            rotation="-90 0 0"
+            material="shader:flat; transparent:true; opacity:1; emissive:#FFD700; emissiveIntensity:0.8"
+            animation="property: scale; from: 0.95 0.95 0.95; to: 1.15 1.15 1.15; to: 0.95 0.95 0.95; dur: 2000; dir: alternate; easing: easeInOutSine; loop: true"
+          ></a-ring>
+        </a-entity>
+
+        <!-- SISI BAWAH KORIDOR (Z positif) -->
+
+        <!-- Rumah Dayak - Kalimantan (bawah kiri) -->
+        <a-entity
+          gltf-model="url(/assets/rumah_adat/rumah_dayak_kalimantan.glb)"
+          position="35 -1 1"
+          scale="1 1 1"
+          rotation="0 180 0"
+          shadow="cast:false;receive:true"
+          class="environmentGround environmentDressing collidable"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+
+        <!-- Portal Masuk Rumah Dayak Kalimantan (di depan rumah) -->
+        <a-entity
+          position="25.37 -0.10 -16.38"
+          teleport-portal="targetPosition: 12 3 -36.5; triggerDistance: 0.5; portalType: entrance"
+          portal-hole="width: 3; height: 3; depth: 2"
+        ></a-entity>
+
+        <!-- Portal Keluar Rumah Dayak Kalimantan (di dalam rumah) -->
+        <a-entity
+          position="46 3 -36.6"
+          rotation="0 90 0"
+          teleport-portal="targetPosition: 18.2 -0.40 -17.43; triggerDistance: 0.5; portalType: exit"
+        ></a-entity>
+
+        <!-- Collision Floor untuk Rumah Dayak Kalimantan -->
+        <a-box
+          position="20 2.9 -36.5"
+          width="90"
+          height="0.5"
+          depth="25"
+          material="opacity: 0; transparent: true; visible: false"
+          class="collidable environmentGround"
+          static-body="shape: box; mass: 0"
+          nav-mesh
+        ></a-box>
+
+        <!-- DISPLAY BAJU ADAT DAYAK - di dalam rumah Dayak Kalimantan -->
+        <a-entity 
+          position="45 6.7 -36"
+          rotation="0 180 0"
+          collectible-item="
+            itemId: baju-dayak-kalimantan;
+            itemName: Pakaian Sapei Sapaq dari Kalimantan;
+            itemDescription: Pakaian Sapei Sapaq dan Ta'a adalah pasangan busana adat tradisional dari Suku Dayak, khususnya sub-Suku Dayak Kenyah yang mendiami wilayah Kalimantan Timur. Pakaian ini merupakan busana kebesaran yang dikenakan untuk upacara adat penting atau tarian penyambutan.;
+            itemImage: /assets/baju_adat/badayak.png;
+            itemCategory: costume;
+            collectDistance: 4;
+          "
+          static-body="shape: box"
+        >
+          <a-plane 
+            src="#baju-dayak"
+            width="1.5" 
+            height="2" 
+            position="0 -3 0"
+            material="transparent:true; alphaTest:0.5; side:double; shader:flat; emissive:#ffffff; emissiveIntensity:0.3"
+          ></a-plane>
+          <a-ring
+            color="#FFD700"
+            radius-inner="1.0"
+            radius-outer="1.2"
+            position="0 -4 0"
+            rotation="-90 0 0"
+            material="shader:flat; transparent:true; opacity:1; emissive:#FFD700; emissiveIntensity:0.8"
+            animation="property: scale; from: 0.95 0.95 0.95; to: 1.15 1.15 1.15; to: 0.95 0.95 0.95; dur: 2000; dir: alternate; easing: easeInOutSine; loop: true"
+          ></a-ring>
+        </a-entity>
+
+        <!-- Artefak Pelinggih Surya - Bali (kanan rumah Dayak) -->
+        <a-entity
+          gltf-model="url(/assets/rumah_adat/artefak_pelinggih_surya_bali.glb)"
+          position="65 -0.4 2.5"
+          scale="1 1 1"
+          rotation="0 200 0"
+          shadow="cast:false;receive:true"
+          class="environmentGround environmentDressing collidable"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+
+        <a-entity 
+          position="65 1 2.45"
+          rotation="0 200 0"
+          collectible-item="
+            itemId: baju-payas-agung-bali;
+            itemName: Payas Agung Bali;
+            itemDescription: Payas Agung adalah busana adat kebesaran Bali yang dipakai dalam upacara sakral dan pernikahan dengan dominasi warna emas dan hiasan ukiran rumit;
+            itemImage: /assets/baju_adat/babali.png;
+            itemCategory: costume;
+            collectDistance: 4;
+          "
+          static-body="shape: box"
+        >
+          <a-plane 
+            src="#baju-bali"
+            width="1.6" 
+            height="2.1" 
+            position="0 -3 0"
+            material="transparent:true; alphaTest:0.5; side:double; shader:flat; emissive:#ffffff; emissiveIntensity:0.3"
+          ></a-plane>
+          <a-ring
+            color="#FFD700"
+            radius-inner="1.0"
+            radius-outer="1.2"
+            position="0 -4 0"
+            rotation="-90 0 0"
+            material="shader:flat; transparent:true; opacity:1; emissive:#FFD700; emissiveIntensity:0.8"
+            animation="property: scale; from: 0.95 0.95 0.95; to: 1.15 1.15 1.15; to: 0.95 0.95 0.95; dur: 2000; dir: alternate; easing: easeInOutSine; loop: true"
+          ></a-ring>
+        </a-entity>
+
+        <!-- Artefak Rong Tiga Bali -->
+        <a-entity
+          gltf-model="url(/assets/rumah_adat/artefak_rong_tiga_bali.glb)"
+          position="68 -0.4 5"
+          scale="1 1 1"
+          rotation="0 180 0"
+          shadow="cast:false;receive:true"
+          class="environmentGround environmentDressing collidable"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+
+        <!-- Artefak Taksu Bali -->
+        <a-entity
+          gltf-model="url(/assets/rumah_adat/artefak_taksu_bali.glb)"
+          position="70 -0.4 3"
+          scale="1 1 1"
+          rotation="0 0 0"
+          shadow="cast:false;receive:true"
+          class="environmentGround environmentDressing collidable"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+
+        <!-- Rumah Joglo - Jawa (bawah tengah) -->
+        <a-entity
+          gltf-model="url(/assets/rumah_adat/rumah_joglo_jawa.glb)"
+          position="10 0.2 20"
+          scale="4 4 4"
+          rotation="0 180 0"
+          shadow="cast:false;receive:true"
+          class="environmentGround environmentDressing collidable"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+
+        <!-- Portal Masuk Rumah Joglo Jawa (di depan rumah) -->
+        <a-entity
+          position="-3.48 -0.11 36.54"
+          teleport-portal="targetPosition: -3.90 0.36 48.13; triggerDistance: 0.5; portalType: entrance"
+          portal-hole="width: 3; height: 3; depth: 2"
+        ></a-entity>
+
+        <!-- Portal Keluar Rumah Joglo Jawa (di dalam rumah) -->
+        <a-entity
+          position="-3.29 0.36 43"
+          teleport-portal="targetPosition: 13 -0.11 8.11; triggerDistance: 0.5; portalType: exit"
+        ></a-entity>
+
+        <!-- Collision Floor untuk Rumah Joglo Jawa -->
+        <a-box
+          position="-3.90 0.26 48.13"
+          width="18"
+          height="0.5"
+          depth="18"
+          material="opacity: 0; transparent: true; visible: false"
+          class="collidable environmentGround"
+          static-body="shape: box; mass: 0"
+          nav-mesh
+        ></a-box>
+
+        <!-- DISPLAY BAJU ADAT JAWA - di dalam rumah Joglo -->
+        <a-entity 
+          position="4 4.3 45"
+          rotation="0 180 0"
+          collectible-item="
+            itemId: baju-beskap-jawa;
+            itemName: Pakaian Beskap dari Jawa;
+            itemDescription: Beskap adalah baju adat pria Jawa (terutama dari wilayah Solo dan Yogyakarta) yang merupakan atasan resmi dan elegan, sering disamakan dengan jas tutup. Pakaian ini sarat akan filosofi dan umumnya dikenakan dalam acara-acara penting, seperti pernikahan, upacara adat, dan pertemuan resmi.;
+            itemImage: /assets/baju_adat/bajawa.png;
+            itemCategory: costume;
+            collectDistance: 4;
+          "
+          static-body="shape: box"
+        >
+          <a-plane 
+            src="#baju-jawa"
+            width="1.5" 
+            height="2" 
+            position="0 -3 0"
+            material="transparent:true; alphaTest:0.5; side:double; shader:flat; emissive:#ffffff; emissiveIntensity:0.3"
+          ></a-plane>
+          <a-ring
+            color="#FFD700"
+            radius-inner="1.0"
+            radius-outer="1.2"
+            position="0 -4 0"
+            rotation="-90 0 0"
+            material="shader:flat; transparent:true; opacity:1; emissive:#FFD700; emissiveIntensity:0.8"
+            animation="property: scale; from: 0.95 0.95 0.95; to: 1.15 1.15 1.15; to: 0.95 0.95 0.95; dur: 2000; dir: alternate; easing: easeInOutSine; loop: true"
+          ></a-ring>
+        </a-entity>
+
+        <!-- Rumah Tolitoli - Sulawesi Tengah (sebelah kiri Saoraja) -->
+        <a-entity
+          gltf-model="url(/assets/rumah_adat/rumah_tolitoli_sulteng.glb)"
+          position="57 -1 -18"
+          scale="1 1 1"
+          rotation="0 0 0"
+          shadow="cast:false;receive:true"
+          class="environmentGround environmentDressing collidable"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+
+        <!-- Portal Masuk Rumah Tolitoli -->
+        <a-entity
+          position="57.82 -0.40 -20.47"
+          rotation="0 90 0"
+          teleport-portal="targetPosition: 69.63 2.32 -20.60; triggerDistance: 0.5; portalType: entrance"
+          portal-hole="width: 3; height: 3; depth: 2"
+        ></a-entity>
+
+        <!-- Portal Keluar Rumah Tolitoli -->
+        <a-entity
+          position="62.11 2.32 -20.42"
+          rotation="0 90 0"
+          teleport-portal="targetPosition: 61 -0.40 -17; triggerDistance: 0.5; portalType: exit"
+        ></a-entity>
+
+        
+        <!-- Display Baju Adat Tolitoli -->
+        <a-entity 
+          position="63 6.4 -28.44"
+          rotation="0 200 0"
+          collectible-item="
+            itemId: baju-nggoli-sulteng;
+            itemName: Pakaian Ngata Tolitoli - Sulawesi Tengah;
+            itemDescription: Busana adat Ngata Tolitoli dikenakan oleh bangsawan Sulawesi Tengah dengan perpaduan warna cerah dan aksen sulam emas yang menonjolkan status sosial;
+            itemImage: /assets/baju_adat/batolitoli.png;
+            itemCategory: costume;
+            collectDistance: 4;
+          "
+          static-body="shape: box"
+        >
+          <a-plane 
+            src="#baju-sulteng"
+            width="1.6" 
+            height="2.1" 
+            position="0 -3 0"
+            material="transparent:true; alphaTest:0.5; side:double; shader:flat; emissive:#ffffff; emissiveIntensity:0.3"
+          ></a-plane>
+          <a-ring
+            color="#FFD700"
+            radius-inner="1.0"
+            radius-outer="1.2"
+            position="0 -4 0"
+            rotation="-90 0 0"
+            material="shader:flat; transparent:true; opacity:1; emissive:#FFD700; emissiveIntensity:0.8"
+            animation="property: scale; from: 0.95 0.95 0.95; to: 1.15 1.15 1.15; to: 0.95 0.95 0.95; dur: 2000; dir: alternate; easing: easeInOutSine; loop: true"
+          ></a-ring>
+        </a-entity>
+
+        <!-- Rumah Saoraja - Sulawesi Selatan (bawah kanan) -->
+        <a-entity
+          gltf-model="url(/assets/rumah_adat/rumah_saoraja_sulsel.glb)"
+          position="75 -0.4 3"
+          scale="0.9 0.9 0.9"
+          rotation="0 180 0"
+          shadow="cast:false;receive:true"
+          class="environmentGround environmentDressing collidable"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+
+        <!-- Portal Masuk Rumah Saoraja Sulsel (di depan rumah) -->
+        <a-entity
+          position="32 -0.4 9.5"
+          teleport-portal="targetPosition: 44 2.79 3.79; triggerDistance: 0.5; portalType: entrance"
+          portal-hole="width: 3; height: 3; depth: 2"
+        ></a-entity>
+
+        <!-- Portal Keluar Rumah Saoraja Sulsel (di dalam rumah) -->
+        <a-entity
+          position="38 2.79 13.5"
+          rotation="0 90 0"
+          teleport-portal="targetPosition: 39.5 -0.10 -4.39; triggerDistance: 0.5; portalType: exit"
+        ></a-entity>
+
+        <!-- Collision Floor untuk Rumah Saoraja Sulsel -->
+        <a-box
+          position="44 2.69 3.79"
+          width="18"
+          height="0.5"
+          depth="18"
+          material="opacity: 0; transparent: true; visible: false"
+          class="collidable environmentGround"
+          static-body="shape: box; mass: 0"
+          nav-mesh
+        ></a-box>
+        
+        <!-- DISPLAY PAKAIAN BODO - di dalam rumah Saoraja Sulawesi Selatan -->
+        <a-entity 
+          position="43 6.6 54.28"
+          rotation="0 0 0"
+          collectible-item="
+            itemId: baju-bodo-sulsel;
+            itemName: Pakaian Bodo dari Sulawesi Selatan;
+            itemDescription: Pakaian Bodo adalah pakaian adat wanita suku Bugis-Makassar (Sulawesi Selatan) yang berbentuk blus longgar, segi empat, berlengan sangat pendek (bodo). Terbuat dari kain tipis transparan, Baju Bodo dipadukan dengan sarung sutra dan memiliki keunikan pada warna yang melambangkan status dan usia pemakainya (misalnya, hijau untuk bangsawan). Busana ini mewah, kaya perhiasan emas, dan digunakan dalam upacara adat.;
+            itemImage: /assets/baju_adat/basulsel.png;
+            itemCategory: costume;
+            collectDistance: 5;
+          "
+          static-body="shape: box"
+        >
+          <a-plane 
+            src="#baju-sulsel"
+            width="1.5" 
+            height="2" 
+            position="0 -3 0"
+            material="transparent:true; alphaTest:0.5; side:double; shader:flat; emissive:#ffffff; emissiveIntensity:0.3"
+          ></a-plane>
+          <a-ring
+            color="#FFD700"
+            radius-inner="1.0"
+            radius-outer="1.2"
+            position="0 -4 0"
+            rotation="-90 0 0"
+            material="shader:flat; transparent:true; opacity:1; emissive:#FFD700; emissiveIntensity:0.8"
+            animation="property: scale; from: 0.95 0.95 0.95; to: 1.15 1.15 1.15; to: 0.95 0.95 0.95; dur: 2000; dir: alternate; easing: easeInOutSine; loop: true"
+          ></a-ring>
+        </a-entity>
+
+        <!-- ===== GAMELAN MUSICAL INSTRUMENT ===== -->
+        <!-- Traditional Javanese gamelan ensemble -->
+        <a-entity
+          gltf-model="url(/assets/gamelan.glb)"
+          position="1.5 0.6 25"
+          scale="0.7 0.7 0.7"
+          rotation="0 180 0"
+          class="environmentGround environmentDressing collidable"
+          shadow="cast:true;receive:true"
+          nav-mesh
+          static-body="shape: auto; mass: 0"
+        ></a-entity>
+
+        <!-- ===== SATPAM GUARDS (PENJAGA RUMAH ADAT) ===== -->
+        <!-- Satpam guards yang menjelaskan sejarah rumah adat -->
+        
+        <!-- Satpam Kalbar - Penjaga Rumah Panjang Kalimantan Barat -->
+        <a-entity
+          id="satpam-kalbar"
+          gltf-model="url(/assets/police.glb)"
+          position="-72.70 -0.10 0"
+          scale="0.5 0.5 0.5"
+          rotation="0 180 0"
+          shadow="cast:true;receive:true"
+          static-body="shape: auto; mass: 0"
+          animation-mixer="clip: Idle; loop: repeat; repetitions: Infinity"
+          satpam-guard="
+            houseId: panjang_kalbar;
+            dialogDistance: 1.5;
+          "
+        ></a-entity>
+
+        <!-- Satpam Papua - Penjaga Rumah Honai -->
+        <a-entity
+          id="satpam-papua"
+          gltf-model="url(/assets/police.glb)"
+          position="-57 -0.2 -17"
+          scale="0.5 0.5 0.5"
+          rotation="0 0 0"
+          shadow="cast:true;receive:true"
+          static-body="shape: auto; mass: 0"
+          animation-mixer="clip: Idle; loop: repeat; repetitions: Infinity"
+          satpam-guard="
+            houseId: honai_papua;
+            dialogDistance: 1.5;
+          "
+        ></a-entity>
+
+        <!-- Satpam Aceh - Penjaga Rumah Krong -->
+        <a-entity
+          id="satpam-aceh"
+          gltf-model="url(/assets/police.glb)"
+          position="-43 0 0"
+          scale="0.5 0.5 0.5"
+          rotation="0 180 0"
+          shadow="cast:true;receive:true"
+          static-body="shape: auto; mass: 0"
+          animation-mixer="clip: Idle; loop: repeat; repetitions: Infinity"
+          satpam-guard="
+            houseId: krong_aceh;
+            dialogDistance: 1.5;
+          "
+        ></a-entity>
+
+        <!-- Satpam Batak - Penjaga Rumah Batak Sumut -->
+        <a-entity
+          id="satpam-batak"
+          gltf-model="url(/assets/police.glb)"
+          position="-75.4 -0.40 -17.10"
+          scale="0.5 0.5 0.5"
+          rotation="0 0 0"
+          shadow="cast:true;receive:true"
+          static-body="shape: auto; mass: 0"
+          animation-mixer="clip: Idle; loop: repeat; repetitions: Infinity"
+          satpam-guard="
+            houseId: batak_sumut;
+            dialogDistance: 1.5;
+          "
+        ></a-entity>
+
+        <!-- Satpam Lampung - Penjaga Rumah Lampung Sumatra -->
+        <a-entity
+          id="satpam-lampung"
+          gltf-model="url(/assets/police.glb)"
+          position="-21 0 -17"
+          scale="0.5 0.5 0.5"
+          rotation="0 0 0"
+          shadow="cast:true;receive:true"
+          static-body="shape: auto; mass: 0"
+          animation-mixer="clip: Idle; loop: repeat; repetitions: Infinity"
+          satpam-guard="
+            houseId: lampung_sumatra;
+            dialogDistance: 1.5;
+          "
+        ></a-entity>
+
+        <!-- Satpam Dayak - Penjaga Rumah Dayak Kalimantan -->
+        <a-entity
+          id="satpam-dayak"
+          gltf-model="url(/assets/police.glb)"
+          position="16.58 -0.4 -17"
+          scale="0.5 0.5 0.5"
+          rotation="0 0 0"
+          shadow="cast:true;receive:true"
+          static-body="shape: auto; mass: 0"
+          animation-mixer="clip: Idle; loop: repeat; repetitions: Infinity"
+          satpam-guard="
+            houseId: dayak_kalimantan;
+            dialogDistance: 1.5;
+          "
+        ></a-entity>
+
+        <!-- Satpam Bali - Penjaga Kompleks Artefak -->
+        <a-entity
+          id="satpam-bali"
+          gltf-model="url(/assets/police.glb)"
+          position="67.45 -0.40 0.25"
+          scale="0.5 0.5 0.5"
+          rotation="0 180 0"
+          shadow="cast:true;receive:true"
+          static-body="shape: auto; mass: 0"
+          animation-mixer="clip: Idle; loop: repeat; repetitions: Infinity"
+          satpam-guard="
+            houseId: bali_artifacts;
+            dialogDistance: 1.5;
+          "
+        ></a-entity>
+
+        <!-- Satpam Jawa - Penjaga Rumah Joglo -->
+        <a-entity
+          id="satpam-jawa"
+          gltf-model="url(/assets/police.glb)"
+          position="16 -0.2 2"
+          scale="0.5 0.5 0.5"
+          rotation="0 180 0"
+          shadow="cast:true;receive:true"
+          static-body="shape: auto; mass: 0"
+          animation-mixer="clip: Idle; loop: repeat; repetitions: Infinity"
+          satpam-guard="
+            houseId: joglo_jawa;
+            dialogDistance: 1.5;
+          "
+        ></a-entity>
+
+        <!-- Satpam Sulteng - Penjaga Rumah Tolitoli -->
+        <a-entity
+          id="satpam-sulteng"
+          gltf-model="url(/assets/police.glb)"
+          position="64.71 -0.40 -18"
+          scale="0.5 0.5 0.5"
+          rotation="0 0 0"
+          shadow="cast:true;receive:true"
+          static-body="shape: auto; mass: 0"
+          animation-mixer="clip: Idle; loop: repeat; repetitions: Infinity"
+          satpam-guard="
+            houseId: tolitoli_sulteng;
+            dialogDistance: 1.5;
+          "
+        ></a-entity>
+
+        <!-- Satpam Sulsel - Penjaga Rumah Saoraja -->
+        <a-entity
+          id="satpam-sulsel"
+          gltf-model="url(/assets/police.glb)"
+          position="34 -0.3 9"
+          scale="0.5 0.5 0.5"
+          rotation="0 180 0"
+          shadow="cast:true;receive:true"
+          static-body="shape: auto; mass: 0"
+          animation-mixer="clip: Idle; loop: repeat; repetitions: Infinity"
+          satpam-guard="
+            houseId: saoraja_sulsel;
+            dialogDistance: 1.5;
+          "
+        ></a-entity>
+
+        <!-- ===== ONDEL-ONDEL NPCs ===== -->
+        <!-- Ondel-ondel figures moving along the corridor as NPCs -->
+        
+        <!-- Ondel-Ondel 1 - Moving from left to right -->
+        <a-entity
+          id="ondel-npc-1"
+          gltf-model="url(/assets/ondel.glb)"
+          position="-50 -3 -5"
+          scale="0.2 0.2 0.2"
+          rotation="0 90 0"
+          ondel-npc="
+            speed: 0.8;
+            direction: forward;
+            startPosition: -50 -3 -5;
+            corridorLength: 120;
+            pauseTime: 3000;
+            animationSpeed: 1.2;
+          "
+          shadow="cast:true;receive:true"
+          animation-mixer="loop: repeat; repetitions: Infinity"
+          static-body="shape: box"
+        ></a-entity>
+
+        <!-- Ondel-Ondel 2 - Moving from right to left -->
+        <a-entity
+          id="ondel-npc-2"
+          gltf-model="url(/assets/ondel.glb)"
+          position="50 -3 -9"
+          scale="0.2 0.2 0.2"
+          rotation="0 -90 0"
+          ondel-npc="
+            speed: 1.0;
+            direction: backward;
+            startPosition: 50 -3 -9;
+            corridorLength: 120;
+            pauseTime: 2500;
+            animationSpeed: 1.0;
+          "
+          shadow="cast:true;receive:true"
+          animation-mixer="loop: repeat; repetitions: Infinity"
+          static-body="shape: box"
+        ></a-entity>
+
+        <!-- Ondel-Ondel 3 - Moving from center-left to right -->
+        <a-entity
+          id="ondel-npc-3"
+          gltf-model="url(/assets/ondel.glb)"
+          position="-20 -3 -13"
+          scale="0.2 0.2 0.2"
+          rotation="0 90 0"
+          ondel-npc="
+            speed: 0.6;
+            direction: forward;
+            startPosition: -20 -3 -13;
+            corridorLength: 120;
+            pauseTime: 4000;
+            animationSpeed: 0.8;
+          "
+          shadow="cast:true;receive:true"
+          animation-mixer="loop: repeat; repetitions: Infinity"
+          static-body="shape: box"
+        ></a-entity>
+
+        <!-- Ondel-Ondel 4 - Moving from center-right to left -->
+        <a-entity
+          id="ondel-npc-4"
+          gltf-model="url(/assets/ondel.glb)"
+          position="20 -3 -2"
+          scale="0.2 0.2 0.2"
+          rotation="0 -90 0"
+          ondel-npc="
+            speed: 0.7;
+            direction: backward;
+            startPosition: 20 -3 -2;
+            corridorLength: 120;
+            pauseTime: 3500;
+            animationSpeed: 0.9;
+          "
+          shadow="cast:true;receive:true"
+          animation-mixer="loop: repeat; repetitions: Infinity"
+          static-body="shape: box"
+        ></a-entity>
+
+        <!-- Background Music - Plays when entering the game -->
+        <a-entity 
+          id="background-music-entity"
+          sound="src: #background-music; autoplay: false; loop: true; volume: 0.3; positional: false"
+        ></a-entity>
+      </a-entity>
+
+      <a-entity
+        id="rig"
+        simple-navmesh-constraint="navmesh:.environmentGround,.environmentDressing;fall:10;height:0;exclude:.navmesh-hole,.portal-hole;"
+        movement-controls="fly:false;controls: keyboard; speed: 0.3; constrainToNavMesh: false; enabled: true;"
+        ground-constraint="groundDistance: 0.2; groundOffset: 0; updateInterval: 100"
+        spawn-in-circle="radius:1"
+        networked="template:#avatar-template;attachTemplateToLocal:false"
+        player-info
+        jump-ability="jumpVelocity: 3; groundDistance: 1.0"
+        simple-collider="distance: 0.8"
+        y-position-lock="enabled: false; targetY: 0"
+        class="player"
+      >
+        <a-entity id="player" class="camera" camera position="0 1.6 0" look-controls="touchEnabled: true; magicWindowTrackingEnabled: false; pointerLockEnabled: true; reverseMouseDrag: false; gyroEnabled: false; hmdEnabled: false; orientationOffset: 0 0 0; enabled: true;">
+          <a-box obb-collider visible="false" height="0.4" depth="0.4" width="0.4"></a-box>
+        </a-entity>
+        <a-entity
+          id="left-hand"
+          networked-hand-controls="hand: left"
+          networked="template: #left-hand-default-template"
+          laser-controls="hand: left"
+          raycaster="showLine: true; far: 50; lineColor: white; objects: .clickable; interval:100;"
+        ></a-entity>
+        <a-entity
+          id="right-hand"
+          networked-hand-controls="hand:right"
+          networked="template:#right-hand-default-template"
+          laser-controls="hand: right"
+          raycaster="showLine: true; far: 50; lineColor: white; objects: .clickable; interval:100;"
+        ></a-entity>
+      </a-entity>
+      </a-scene>
+    </div>
+    
+    <!-- Loading Screen Script -->
+    <script>
+      (function() {
+        // Ensure experienceStarted is false during loading
+        if (window.setExperienceStarted) {
+          window.setExperienceStarted(false);
+        }
+        
+        // Ensure scene container is hidden during loading and stays hidden until user clicks Enter
+        const sceneContainer = document.querySelector('.scene-container');
+        if (sceneContainer) {
+          sceneContainer.style.display = 'none';
+          sceneContainer.style.visibility = 'hidden';
+          sceneContainer.style.opacity = '0';
+          sceneContainer.style.pointerEvents = 'none';
+          // Store original display style to restore later
+          sceneContainer.dataset.originalDisplay = 'none';
+        }
+        
+        // Prevent any auto-start of the game
+        window.__gameAutoStartDisabled = true;
+        
+        const loadingScreen = document.getElementById('loading-screen');
+        const progressBar = document.getElementById('progress-bar');
+        const loadingProgress = document.getElementById('loading-progress');
+        const loadingStatus = document.getElementById('loading-status');
+        
+        // Check username from localStorage
+        const username = localStorage.getItem('userUsername') || localStorage.getItem('username') || 'Player';
+        const userId = localStorage.getItem('userId') || 'unknown';
+        console.log('[Loading] ✅ Username detected:', username);
+        console.log('[Loading] ✅ User ID:', userId);
+        
+        // Update loading text to show username
+        const loadingText = document.getElementById('loading-text');
+        if (loadingText && username) {
+          loadingText.textContent = `Memuat Nusa-Dwipa... (${username})`;
+        }
+        
+        let loadedAssets = 0;
+        let totalAssets = 0;
+        let assetsChecked = false;
+        
+        function updateProgress(loaded, total, status) {
+          loadedAssets = loaded;
+          totalAssets = total;
+          const percentage = total > 0 ? Math.round((loaded / total) * 100) : 0;
+          progressBar.style.width = percentage + '%';
+          loadingProgress.textContent = percentage + '%';
+          if (status) {
+            loadingStatus.textContent = status;
+          }
+        }
+        
+        function hideLoadingScreen() {
+          loadingScreen.classList.add('hidden');
+          setTimeout(() => {
+            loadingScreen.style.display = 'none';
+          }, 500);
+        }
+        
+        // Wait for A-Frame to be ready
+        window.addEventListener('load', function() {
+          const scene = document.querySelector('a-scene');
+          
+          if (!scene) {
+            console.error('A-Scene not found');
+            return;
+          }
+          
+          // Wait for scene to be ready
+          scene.addEventListener('loaded', function() {
+            // Ensure experienceStarted stays false during loading
+            if (window.setExperienceStarted) {
+              window.setExperienceStarted(false);
+            }
+            
+            // Log username info when starting to load assets
+            console.log('[Loading] 🎮 Starting game for user:', username);
+            console.log('[Loading] 📋 User ID:', userId);
+            console.log('[Loading] 🔄 Loading assets...');
+            
+            updateProgress(0, 1, `Memuat assets untuk ${username}...`);
+            
+            // Get all assets that need to be loaded
+            const assets = scene.querySelector('a-assets');
+            const gltfModels = scene.querySelectorAll('[gltf-model]');
+            const images = assets ? assets.querySelectorAll('img') : [];
+            const audio = assets ? assets.querySelectorAll('audio') : [];
+            
+            // Count total assets (models, images, audio)
+            totalAssets = gltfModels.length + images.length + audio.length;
+            if (totalAssets === 0) totalAssets = 1;
+            
+            // Track loaded assets
+            let loadedCount = 0;
+            
+            // Function to wait for UI components to be ready
+            function waitForUIReady() {
+              return new Promise((resolve, reject) => {
+                const maxWaitTime = 15000; // 15 seconds max wait
+                const checkInterval = 200; // Check every 200ms
+                const startTime = Date.now();
+                let lastProgressUpdate = 0;
+                
+                // Update status to show we're waiting for UI
+                updateProgress(totalAssets, totalAssets, 'Menunggu UI siap...');
+                
+                function checkUIReady() {
+                  const elapsed = Date.now() - startTime;
+                  
+                  // Update progress message periodically
+                  if (elapsed - lastProgressUpdate > 1000) {
+                    const secondsLeft = Math.ceil((maxWaitTime - elapsed) / 1000);
+                    if (secondsLeft > 0) {
+                      updateProgress(totalAssets, totalAssets, `Menunggu UI siap... (${secondsLeft}s)`);
+                    }
+                    lastProgressUpdate = elapsed;
+                  }
+                  
+                  // Check if UI components are loaded
+                  const enterScreenExists = document.querySelector('.naf-centered-fullscreen');
+                  const setEnteredExists = window.setEntered && typeof window.setEntered === 'function';
+                  const setExperienceStartedExists = typeof window.setExperienceStarted === 'function';
+                  const setExperiencePhaseExists = typeof window.setExperiencePhase === 'function';
+                  
+                  // UI is ready if we have the EnterScreen component AND the necessary functions
+                  // This ensures UI is fully functional, not just partially loaded
+                  const uiComponentsReady = enterScreenExists && setEnteredExists && 
+                                           setExperienceStartedExists && setExperiencePhaseExists;
+                  
+                  if (uiComponentsReady) {
+                    console.log('[Loading] ✅ UI components ready after', elapsed, 'ms');
+                    updateProgress(totalAssets, totalAssets, 'UI siap!');
+                    // Give UI a moment to fully initialize and render
+                    setTimeout(() => {
+                      // Double-check UI is still ready after delay
+                      const stillReady = document.querySelector('.naf-centered-fullscreen') && 
+                                        window.setEntered && typeof window.setEntered === 'function';
+                      if (stillReady) {
+                        resolve();
+                      } else {
+                        console.warn('[Loading] ⚠️ UI became unavailable after delay, retrying...');
+                        // Retry if UI became unavailable
+                        setTimeout(checkUIReady, checkInterval);
+                      }
+                    }, 500);
+                    return;
+                  }
+                  
+                  if (elapsed > maxWaitTime) {
+                    console.warn('[Loading] ⚠️ UI ready check timeout after', elapsed, 'ms');
+                    updateProgress(totalAssets, totalAssets, 'UI timeout, melanjutkan...');
+                    // Check what's missing
+                    console.log('[Loading] UI status:', {
+                      enterScreen: !!enterScreenExists,
+                      setEntered: !!setEnteredExists,
+                      setExperienceStarted: !!setExperienceStartedExists,
+                      setExperiencePhase: !!setExperiencePhaseExists
+                    });
+                    reject(new Error('UI ready timeout'));
+                    return;
+                  }
+                  
+                  // Continue checking
+                  setTimeout(checkUIReady, checkInterval);
+                }
+                
+                // Start checking after a short delay to allow scripts to load
+                setTimeout(checkUIReady, 500);
+              });
+            }
+            
+            function assetLoaded(assetType) {
+              loadedCount++;
+              const percentage = Math.round((loadedCount / totalAssets) * 100);
+              
+              // Only update progress every 10% or on last asset
+              if (loadedCount % Math.max(1, Math.floor(totalAssets / 10)) === 0 || loadedCount >= totalAssets) {
+                updateProgress(loadedCount, totalAssets, 'Memuat ' + assetType + '... (' + loadedCount + '/' + totalAssets + ')');
+              }
+              
+              if (loadedCount >= totalAssets) {
+                updateProgress(totalAssets, totalAssets, 'Assets selesai dimuat!');
+                // Wait for UI to be ready before showing avatar selection
+                waitForUIReady().then(() => {
+                  updateProgress(totalAssets, totalAssets, 'Siap masuk ke game!');
+                  setTimeout(() => {
+                    hideLoadingScreen();
+                    showAvatarSelection();
+                  }, 500);
+                }).catch(() => {
+                  // Fallback: proceed anyway after timeout
+                  console.warn('[Loading] UI ready check timeout, proceeding anyway...');
+                  updateProgress(totalAssets, totalAssets, 'Melanjutkan...');
+                  setTimeout(() => {
+                    hideLoadingScreen();
+                    showAvatarSelection();
+                  }, 500);
+                });
+              }
+            }
+            
+            // Listen for model loaded events
+            gltfModels.forEach(function(model) {
+              model.addEventListener('model-loaded', function() {
+                assetLoaded('model 3D');
+              });
+              model.addEventListener('loaded', function() {
+                assetLoaded('model 3D');
+              });
+            });
+            
+            // Listen for image loaded events
+            images.forEach(function(img) {
+              if (img.complete) {
+                assetLoaded('gambar');
+              } else {
+                img.addEventListener('load', function() {
+                  assetLoaded('gambar');
+                });
+                img.addEventListener('error', function() {
+                  console.warn('[Loading] Image failed to load:', img.src);
+                  assetLoaded('gambar');
+                });
+              }
+            });
+            
+            // Listen for audio loaded events
+            audio.forEach(function(aud) {
+              if (aud.readyState >= 2) { // HAVE_CURRENT_DATA
+                assetLoaded('audio');
+              } else {
+                aud.addEventListener('canplaythrough', function() {
+                  assetLoaded('audio');
+                });
+                aud.addEventListener('error', function() {
+                  console.warn('[Loading] Audio failed to load:', aud.src);
+                  assetLoaded('audio');
+                });
+              }
+            });
+            
+            // Listen for assets loaded
+            if (assets) {
+              assets.addEventListener('loaded', function() {
+                // Don't hide here, wait for individual assets
+              });
+            }
+            
+            // Fallback: hide after 15 seconds if not all assets loaded
+            setTimeout(function() {
+              if (loadedCount < totalAssets) {
+                updateProgress(totalAssets, totalAssets, 'Memuat...');
+                // Wait for UI to be ready before showing avatar selection
+                waitForUIReady().then(() => {
+                  setTimeout(() => {
+                    hideLoadingScreen();
+                    showAvatarSelection();
+                  }, 500);
+                }).catch(() => {
+                  // Fallback: proceed anyway after timeout
+                  console.warn('[Loading] UI ready check timeout, proceeding anyway...');
+                  setTimeout(() => {
+                    hideLoadingScreen();
+                    showAvatarSelection();
+                  }, 500);
+                });
+              }
+            }, 15000);
+          });
+        });
+      })();
+      
+      // Show Avatar Selection Screen
+      let avatarSelectionShown = false;
+      function showAvatarSelection() {
+        // Prevent multiple calls
+        if (avatarSelectionShown) return;
+        avatarSelectionShown = true;
+        
+        console.log('[Loading] ✅ All assets loaded and UI ready, showing avatar selection...');
+        
+        // Ensure experienceStarted is false during avatar selection
+        if (window.setExperienceStarted) {
+          window.setExperienceStarted(false);
+        }
+        
+        // Ensure scene container is hidden until user clicks Enter
+        const sceneContainer = document.querySelector('.scene-container');
+        if (sceneContainer) {
+          sceneContainer.style.display = 'none';
+          sceneContainer.style.visibility = 'hidden';
+          sceneContainer.style.opacity = '0';
+        }
+        
+        // Wait for UI components to be fully ready
+        const waitForUIAndShow = () => {
+          // Check if UI components are loaded and have EnterScreen
+          const enterScreen = document.querySelector('.naf-centered-fullscreen');
+          
+          if (enterScreen && window.setEntered) {
+            // UI components are loaded, use their EnterScreen
+            console.log('[Loading] ✅ UI components ready, showing EnterScreen...');
+            
+            // Ensure EnterScreen is visible
+            if (window.setEntered) {
+              window.setEntered(false); // Show EnterScreen
+            }
+            
+            // Hide our custom avatar selection screen
+            const avatarScreen = document.getElementById('avatar-selection-screen');
+            if (avatarScreen) {
+              avatarScreen.style.display = 'none';
+            }
+            
+            // Listen for experience started event - user clicked Enter button
+            const handleEntered = () => {
+              console.log('[Loading] ✅ User clicked Enter, starting game...');
+              // User has selected avatar and clicked Enter
+              setTimeout(() => {
+                if (window.enterGame && !window.enterGameCalled) {
+                  window.enterGame();
+                }
+              }, 500);
+            };
+            
+            // Listen for custom event when user enters
+            window.addEventListener('nusa:user-entered', handleEntered, { once: true });
+            window.addEventListener('nusa:start-experience', handleEntered, { once: true });
+            
+            // Also check entered state periodically (throttled) - but don't auto-start
+            let lastEnteredState = false;
+            let lastExperienceStarted = false;
+            let checkCount = 0;
+            const checkEntered = setInterval(() => {
+              checkCount++;
+              // Check if experience started (user clicked Enter in solo mode)
+              const experienceStarted = window.experienceStarted && typeof window.experienceStarted === 'function' ? window.experienceStarted() : false;
+              const entered = window.entered && typeof window.entered === 'function' ? window.entered() : false;
+              
+              // Check if experience phase is 'in-game'
+              const experiencePhase = window.experiencePhase && typeof window.experiencePhase === 'function' ? window.experiencePhase() : null;
+              
+              // Only start if user explicitly clicked Enter (entered changed to true)
+              if (experiencePhase === 'in-game' || (experienceStarted && !lastExperienceStarted)) {
+                clearInterval(checkEntered);
+                handleEntered();
+                return;
+              }
+              
+              // If entered and scene loaded, wait a bit then start
+              if (entered && !lastEnteredState) {
+                const scene = document.querySelector('a-scene');
+                if (scene && scene.hasLoaded) {
+                  // Wait a bit for UI to settle
+                  setTimeout(() => {
+                    clearInterval(checkEntered);
+                    handleEntered();
+                  }, 1000);
+                  return;
+                }
+              }
+              
+              lastEnteredState = entered;
+              lastExperienceStarted = experienceStarted;
+              
+              // Stop checking after 300 iterations (60 seconds at 200ms interval)
+              if (checkCount > 300) {
+                clearInterval(checkEntered);
+                // Don't auto-start, just log
+                console.log('[Loading] ⚠️ Timeout waiting for user to click Enter');
+              }
+            }, 200);
+            
+          } else {
+            // UI components not loaded yet, wait and retry
+            console.log('[Loading] ⚠️ UI components not ready yet, retrying...');
+            setTimeout(waitForUIAndShow, 500);
+          }
+        };
+        
+        // Start checking for UI readiness
+        setTimeout(waitForUIAndShow, 100);
+      }
+      
+      // Enter Game Function - Shows UI and hides loading screen
+      // This function is ONLY called when user explicitly clicks Enter button
+      window.enterGameCalled = false;
+      window.__gameStarted = false; // Flag to prevent screen from turning white
+      
+      // Function to ensure canvas/scene stays visible (prevents white screen)
+      function ensureSceneVisible() {
+        if (!window.__gameStarted) return;
+        
+        const sceneContainer = document.querySelector('.scene-container');
+        const aScene = document.querySelector('a-scene');
+        
+        if (sceneContainer) {
+          const display = window.getComputedStyle(sceneContainer).display;
+          const visibility = window.getComputedStyle(sceneContainer).visibility;
+          const opacity = window.getComputedStyle(sceneContainer).opacity;
+          
+          if (display === 'none' || visibility === 'hidden' || parseFloat(opacity) < 0.1) {
+            console.warn('[SceneGuard] ⚠️ Scene container was hidden, restoring...');
+            sceneContainer.style.setProperty('display', 'block', 'important');
+            sceneContainer.style.setProperty('visibility', 'visible', 'important');
+            sceneContainer.style.setProperty('opacity', '1', 'important');
+          }
+        }
+        
+        if (aScene) {
+          const display = window.getComputedStyle(aScene).display;
+          const visibility = window.getComputedStyle(aScene).visibility;
+          const opacity = window.getComputedStyle(aScene).opacity;
+          
+          if (display === 'none' || visibility === 'hidden' || parseFloat(opacity) < 0.1) {
+            console.warn('[SceneGuard] ⚠️ A-Scene was hidden, restoring...');
+            aScene.style.setProperty('display', 'block', 'important');
+            aScene.style.setProperty('visibility', 'visible', 'important');
+            aScene.style.setProperty('opacity', '1', 'important');
+          }
+          
+          if (aScene.canvas) {
+            const canvasDisplay = window.getComputedStyle(aScene.canvas).display;
+            const canvasVisibility = window.getComputedStyle(aScene.canvas).visibility;
+            const canvasOpacity = window.getComputedStyle(aScene.canvas).opacity;
+            
+            if (canvasDisplay === 'none' || canvasVisibility === 'hidden' || parseFloat(canvasOpacity) < 0.1) {
+              console.warn('[SceneGuard] ⚠️ Canvas was hidden, restoring...');
+              aScene.canvas.style.setProperty('display', 'block', 'important');
+              aScene.canvas.style.setProperty('visibility', 'visible', 'important');
+              aScene.canvas.style.setProperty('opacity', '1', 'important');
+            }
+          }
+        }
+      }
+      
+      // Start periodic check to ensure scene stays visible
+      let sceneGuardInterval = null;
+      function startSceneGuard() {
+        if (sceneGuardInterval) return;
+        sceneGuardInterval = setInterval(ensureSceneVisible, 500); // Check every 500ms
+        console.log('[SceneGuard] ✅ Scene guard started');
+      }
+      
+      function stopSceneGuard() {
+        if (sceneGuardInterval) {
+          clearInterval(sceneGuardInterval);
+          sceneGuardInterval = null;
+          console.log('[SceneGuard] ⏹️ Scene guard stopped');
+        }
+      }
+      
+      // Make functions globally accessible for cleanup
+      window.startSceneGuard = startSceneGuard;
+      window.stopSceneGuard = stopSceneGuard;
+      window.ensureSceneVisible = ensureSceneVisible;
+      
+        // MutationObserver to prevent unwanted style changes
+        let styleProtectionObserver = null;
+        function startStyleProtection() {
+          if (styleProtectionObserver) return;
+          
+          styleProtectionObserver = new MutationObserver(function(mutations) {
+            if (!window.__gameStarted) return;
+            
+            mutations.forEach(function(mutation) {
+              const target = mutation.target;
+              
+              // Check both style and class changes
+              if (mutation.type === 'attributes' && 
+                  (mutation.attributeName === 'style' || mutation.attributeName === 'class')) {
+                
+                // Protect scene container
+                if (target.classList && target.classList.contains('scene-container')) {
+                  const display = window.getComputedStyle(target).display;
+                  const visibility = window.getComputedStyle(target).visibility;
+                  const opacity = window.getComputedStyle(target).opacity;
+                  
+                  if (display === 'none' || visibility === 'hidden' || parseFloat(opacity) < 0.1) {
+                    console.warn('[StyleProtection] ⚠️ Blocked attempt to hide scene container');
+                    target.style.setProperty('display', 'block', 'important');
+                    target.style.setProperty('visibility', 'visible', 'important');
+                    target.style.setProperty('opacity', '1', 'important');
+                    // Remove any classes that might hide it
+                    target.classList.remove('hidden');
+                  }
+                }
+                
+                // Protect a-scene
+                if (target.tagName === 'A-SCENE') {
+                  const display = window.getComputedStyle(target).display;
+                  const visibility = window.getComputedStyle(target).visibility;
+                  const opacity = window.getComputedStyle(target).opacity;
+                  
+                  if (display === 'none' || visibility === 'hidden' || parseFloat(opacity) < 0.1) {
+                    console.warn('[StyleProtection] ⚠️ Blocked attempt to hide a-scene');
+                    target.style.setProperty('display', 'block', 'important');
+                    target.style.setProperty('visibility', 'visible', 'important');
+                    target.style.setProperty('opacity', '1', 'important');
+                    // Remove any classes that might hide it
+                    target.classList.remove('hidden');
+                  }
+                }
+                
+                // Protect canvas
+                if (target.tagName === 'CANVAS' && target.parentElement && target.parentElement.tagName === 'A-SCENE') {
+                  const display = window.getComputedStyle(target).display;
+                  const visibility = window.getComputedStyle(target).visibility;
+                  const opacity = window.getComputedStyle(target).opacity;
+                  
+                  if (display === 'none' || visibility === 'hidden' || parseFloat(opacity) < 0.1) {
+                    console.warn('[StyleProtection] ⚠️ Blocked attempt to hide canvas');
+                    target.style.setProperty('display', 'block', 'important');
+                    target.style.setProperty('visibility', 'visible', 'important');
+                    target.style.setProperty('opacity', '1', 'important');
+                    // Remove any classes that might hide it
+                    target.classList.remove('hidden');
+                  }
+                }
+              }
+            });
+          });
+        
+        // Observe scene container and a-scene
+        const sceneContainer = document.querySelector('.scene-container');
+        const aScene = document.querySelector('a-scene');
+        
+        if (sceneContainer) {
+          styleProtectionObserver.observe(sceneContainer, {
+            attributes: true,
+            attributeFilter: ['style', 'class']
+          });
+        }
+        
+        if (aScene) {
+          styleProtectionObserver.observe(aScene, {
+            attributes: true,
+            attributeFilter: ['style', 'class']
+          });
+          
+          // Also observe canvas when it's created
+          if (aScene.canvas) {
+            styleProtectionObserver.observe(aScene.canvas, {
+              attributes: true,
+              attributeFilter: ['style', 'class']
+            });
+          }
+          
+          // Watch for canvas creation
+          const canvasObserver = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+              mutation.addedNodes.forEach(function(node) {
+                if (node.tagName === 'CANVAS' && node.parentElement === aScene) {
+                  styleProtectionObserver.observe(node, {
+                    attributes: true,
+                    attributeFilter: ['style', 'class']
+                  });
+                }
+              });
+            });
+          });
+          
+          canvasObserver.observe(aScene, { childList: true });
+        }
+        
+        console.log('[StyleProtection] ✅ Style protection started');
+      }
+      
+      window.enterGame = function() {
+        // Prevent multiple calls
+        if (window.enterGameCalled) {
+          console.log('[EnterGame] ⚠️ enterGame already called, ignoring...');
+          return;
+        }
+        window.enterGameCalled = true;
+        window.__gameStarted = true; // Mark game as started
+        console.log('[EnterGame] ✅ Starting game after user clicked Enter...');
+        
+        // Start timer when Enter is clicked (game.html is always solo mode)
+        console.log('[EnterGame] Starting solo timer...');
+        const startTimerWithRetry = (attempt = 0) => {
+          if (window.gameProgress && typeof window.gameProgress.startSoloTimer === 'function') {
+            window.gameProgress.startSoloTimer();
+            console.log('[EnterGame] ✅ Solo timer started (attempt ' + attempt + ')');
+            return true;
+          } else if (attempt < 10) {
+            setTimeout(() => startTimerWithRetry(attempt + 1), 200);
+            return false;
+          } else {
+            console.error('[EnterGame] ❌ gameProgress.startSoloTimer not available after 10 attempts');
+            return false;
+          }
+        };
+        startTimerWithRetry();
+        
+        // Hide loading screen and avatar selection - PERMANENTLY
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) {
+          loadingScreen.style.transition = 'none';
+          loadingScreen.style.display = 'none';
+          loadingScreen.style.visibility = 'hidden';
+          loadingScreen.style.opacity = '0';
+          loadingScreen.style.pointerEvents = 'none';
+          loadingScreen.style.zIndex = '-1';
+          loadingScreen.classList.add('hidden');
+          loadingScreen.dataset.gameStarted = 'true'; // Mark as hidden after game start
+        }
+        
+        const avatarScreen = document.getElementById('avatar-selection-screen');
+        if (avatarScreen) {
+          avatarScreen.style.display = 'none';
+          avatarScreen.classList.remove('show');
+          avatarScreen.dataset.gameStarted = 'true'; // Mark as hidden after game start
+        }
+        
+        // Ensure scene is visible - PERMANENTLY
+        const sceneContainer = document.querySelector('.scene-container');
+        if (sceneContainer) {
+          sceneContainer.style.setProperty('display', 'block', 'important');
+          sceneContainer.style.setProperty('visibility', 'visible', 'important');
+          sceneContainer.style.setProperty('opacity', '1', 'important');
+          sceneContainer.style.setProperty('z-index', '1', 'important');
+          sceneContainer.style.setProperty('pointer-events', 'auto', 'important');
+          sceneContainer.classList.add('ready');
+          sceneContainer.dataset.gameStarted = 'true'; // Mark as visible after game start
+        }
+        
+        const aScene = document.querySelector('a-scene');
+        if (aScene) {
+          aScene.style.setProperty('display', 'block', 'important');
+          aScene.style.setProperty('visibility', 'visible', 'important');
+          aScene.style.setProperty('opacity', '1', 'important');
+          aScene.style.setProperty('pointer-events', 'auto', 'important');
+          aScene.dataset.gameStarted = 'true'; // Mark as visible after game start
+          
+          // Ensure canvas is visible and can receive input
+          if (aScene.canvas) {
+            aScene.canvas.style.setProperty('display', 'block', 'important');
+            aScene.canvas.style.setProperty('visibility', 'visible', 'important');
+            aScene.canvas.style.setProperty('opacity', '1', 'important');
+            aScene.canvas.style.setProperty('pointer-events', 'auto', 'important');
+            aScene.canvas.style.setProperty('cursor', 'none', 'important');
+            aScene.canvas.dataset.gameStarted = 'true'; // Mark as visible after game start
+          }
+        }
+        
+        // Start scene protection mechanisms
+        setTimeout(() => {
+          startSceneGuard();
+          startStyleProtection();
+        }, 100);
+        
+        // Trigger experience started event for UI components
+        setTimeout(() => {
+          // First, ensure entered and sceneLoaded are true
+          if (window.setEntered) {
+            window.setEntered(true);
+          }
+          
+          const scene = document.querySelector('a-scene');
+          if (scene && scene.hasLoaded && window.setSceneLoaded) {
+            window.setSceneLoaded(true);
+          }
+          
+          // Then set experience started and phase
+          if (window.setExperienceStarted) {
+            window.setExperienceStarted(true);
+          }
+          
+          if (window.setExperiencePhase) {
+            window.setExperiencePhase('in-game');
+          }
+          
+          // Dispatch custom event for UI components (only once)
+          if (!window.__experienceEventDispatched) {
+            const event = new CustomEvent('nusa:start-experience');
+            window.dispatchEvent(event);
+            document.dispatchEvent(event);
+            window.__experienceEventDispatched = true;
+          }
+          
+          // CRITICAL: Block keyboard input langsung ke movement-controls
+          // Hanya izinkan keyboard events dari joystick virtual
+          // Set flag untuk menandai event dari joystick
+          window.__joystickEvents = new WeakSet();
+          
+          // Block keyboard input langsung (WASD) dari keyboard fisik
+          const blockDirectKeyboard = (e) => {
+            // Hanya block jika bukan dari joystick
+            if (!e.__fromJoystick && !window.__joystickEvents.has(e)) {
+              const movementKeys = ['w', 'a', 's', 'd', 'W', 'A', 'S', 'D', 
+                                   'KeyW', 'KeyA', 'KeyS', 'KeyD', 
+                                   'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+              if (movementKeys.includes(e.key) || movementKeys.includes(e.code)) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                return false;
+              }
+            }
+          };
+          
+          // Add event listeners untuk block keyboard langsung
+          document.addEventListener('keydown', blockDirectKeyboard, true);
+          document.addEventListener('keyup', blockDirectKeyboard, true);
+          window.addEventListener('keydown', blockDirectKeyboard, true);
+          window.addEventListener('keyup', blockDirectKeyboard, true);
+          
+          console.log('[Controls] ✅ Keyboard input langsung diblokir - hanya joystick yang aktif');
+          
+          // Activate camera look-controls after scene is visible
+          setTimeout(() => {
+            const playerCamera = document.getElementById('player');
+            const aScene = document.querySelector('a-scene');
+            
+            if (playerCamera && aScene) {
+              // Ensure look-controls component is active
+              const lookControls = playerCamera.components['look-controls'];
+              if (lookControls) {
+                // Re-enable look-controls if paused
+                if (lookControls.pause) {
+                  lookControls.pause = false;
+                  lookControls.play();
+                }
+                
+                // Request pointer lock for mouse control (requires user interaction)
+                const canvas = aScene.canvas;
+                if (canvas) {
+                  // Add click handler to request pointer lock when user clicks on canvas
+                  const requestPointerLock = () => {
+                    const requestLock = canvas.requestPointerLock || 
+                                       canvas.mozRequestPointerLock || 
+                                       canvas.webkitRequestPointerLock;
+                    if (requestLock) {
+                      requestLock.call(canvas).catch(err => {
+                        console.log('[Camera] Pointer lock request failed (this is normal):', err.message);
+                        // That's okay, user can click to enable it manually
+                      });
+                    }
+                  };
+                  
+                  // Request pointer lock after a short delay
+                  setTimeout(() => {
+                    // Try to request pointer lock
+                    requestPointerLock();
+                    
+                    // Also add click listener to canvas for manual activation
+                    canvas.addEventListener('click', requestPointerLock, { once: true });
+                  }, 200);
+                }
+                
+                console.log('[Camera] ✅ Look-controls activated');
+              } else {
+                console.warn('[Camera] ⚠️ Look-controls component not found');
+              }
+              
+              // Also ensure camera component is active
+              const camera = playerCamera.components.camera;
+              if (camera) {
+                camera.active = true;
+                console.log('[Camera] ✅ Camera component activated');
+              }
+            }
+          }, 300);
+          
+          // Also listen for scene loaded event to ensure look-controls are active
+          const aScene = document.querySelector('a-scene');
+          if (aScene) {
+            const ensureLookControlsActive = () => {
+              const playerCamera = document.getElementById('player');
+              if (playerCamera) {
+                const lookControls = playerCamera.components['look-controls'];
+                if (lookControls && lookControls.pause) {
+                  lookControls.pause = false;
+                  lookControls.play();
+                  console.log('[Camera] ✅ Look-controls re-activated after scene loaded');
+                }
+              }
+            };
+            
+            if (aScene.hasLoaded) {
+              setTimeout(ensureLookControlsActive, 500);
+            } else {
+              aScene.addEventListener('loaded', () => {
+                setTimeout(ensureLookControlsActive, 500);
+              }, { once: true });
+            }
+          }
+          
+          // Track if navbar is being hidden (prevent rapid clicks from hiding it)
+          let navbarHiddenState = false;
+          let lastNavbarCheck = 0;
+          
+          // Function to ensure bottom navbar is always clickable
+          function ensureBottomNavbarClickable() {
+            const now = Date.now();
+            // Throttle checks to prevent excessive DOM manipulation
+            if (now - lastNavbarCheck < 100) return;
+            lastNavbarCheck = now;
+            
+            const bottomBar = document.querySelector('.naf-bottom-bar-center');
+            if (bottomBar) {
+              // Check current state
+              const computedStyle = window.getComputedStyle(bottomBar);
+              const isHidden = computedStyle.display === 'none' || 
+                              computedStyle.visibility === 'hidden' || 
+                              parseFloat(computedStyle.opacity) < 0.1;
+              
+              // Force show bottom bar - ALWAYS, regardless of state
+              bottomBar.style.setProperty('display', 'flex', 'important');
+              bottomBar.style.setProperty('visibility', 'visible', 'important');
+              bottomBar.style.setProperty('opacity', '1', 'important');
+              bottomBar.style.setProperty('z-index', '100001', 'important'); // Higher than modals
+              bottomBar.style.setProperty('position', 'fixed', 'important');
+              bottomBar.style.setProperty('bottom', '20px', 'important');
+              bottomBar.style.setProperty('left', '50%', 'important');
+              bottomBar.style.setProperty('transform', 'translateX(-50%)', 'important');
+              bottomBar.style.setProperty('pointer-events', 'auto', 'important');
+              
+              // Remove any classes that might hide it
+              bottomBar.classList.remove('hidden');
+              
+              // Ensure all buttons inside are clickable
+              const buttons = bottomBar.querySelectorAll('button, [role="button"], .btn, .btn-secondary, .btn-rounded');
+              buttons.forEach(function(button) {
+                button.style.setProperty('pointer-events', 'auto', 'important');
+                button.style.setProperty('z-index', '100002', 'important');
+                button.style.setProperty('position', 'relative', 'important');
+                button.style.setProperty('cursor', 'pointer', 'important');
+                
+                // Ensure button is not disabled
+                if (button.hasAttribute('disabled')) {
+                  button.removeAttribute('disabled');
+                }
+                
+                // Remove any classes that might disable it
+                button.classList.remove('disabled', 'hidden');
+              });
+              
+              // If navbar was hidden, log it
+              if (isHidden) {
+                console.log('[Navbar] ⚠️ Bottom navbar was hidden, restored');
+                navbarHiddenState = false;
+              }
+            }
+          }
+          
+          // Force show navbar immediately after any click (debounced)
+          let navbarRestoreTimeout = null;
+          function forceShowNavbarAfterClick() {
+            // Clear any pending restore
+            if (navbarRestoreTimeout) {
+              clearTimeout(navbarRestoreTimeout);
+            }
+            
+            // Immediately ensure navbar is visible
+            ensureBottomNavbarClickable();
+            
+            // Also restore after a short delay to catch any async hiding
+            navbarRestoreTimeout = setTimeout(function() {
+              ensureBottomNavbarClickable();
+              // Check again after another delay
+              setTimeout(ensureBottomNavbarClickable, 200);
+            }, 100);
+          }
+          
+          // Function to ensure top navbar is always clickable
+          function ensureTopNavbarClickable() {
+            const topBar = document.querySelector('.naf-top-bar-right');
+            if (topBar) {
+              topBar.style.setProperty('display', 'flex', 'important');
+              topBar.style.setProperty('visibility', 'visible', 'important');
+              topBar.style.setProperty('opacity', '1', 'important');
+              topBar.style.setProperty('z-index', '100001', 'important');
+              topBar.style.setProperty('position', 'fixed', 'important');
+              topBar.style.setProperty('top', '20px', 'important');
+              topBar.style.setProperty('right', '20px', 'important');
+              topBar.style.setProperty('pointer-events', 'auto', 'important');
+              
+              // Ensure all buttons inside are clickable
+              const buttons = topBar.querySelectorAll('button, [role="button"], .btn');
+              buttons.forEach(function(button) {
+                button.style.setProperty('pointer-events', 'auto', 'important');
+                button.style.setProperty('z-index', '100002', 'important');
+                button.style.setProperty('position', 'relative', 'important');
+                button.style.setProperty('cursor', 'pointer', 'important');
+              });
+            }
+          }
+          
+          // Force show UI buttons after a delay to ensure they're rendered
+          setTimeout(() => {
+            ensureBottomNavbarClickable();
+            ensureTopNavbarClickable();
+            
+            // Also ensure GameHUD is visible (but only after experience started)
+            // GameHUD harus tetap terlihat meskipun settings dibuka - z-index lebih tinggi dari settings (100020)
+            const gameHUD = document.querySelector('[data-gamehud]');
+            if (gameHUD) {
+              gameHUD.style.setProperty('display', 'flex', 'important');
+              gameHUD.style.setProperty('visibility', 'visible', 'important');
+              gameHUD.style.setProperty('opacity', '1', 'important');
+              gameHUD.style.setProperty('z-index', '100021', 'important'); // Lebih tinggi dari settings (100020)
+              gameHUD.style.setProperty('position', 'fixed', 'important');
+              gameHUD.style.setProperty('top', '20px', 'important');
+              gameHUD.style.setProperty('left', '20px', 'important');
+              gameHUD.style.setProperty('pointer-events', 'auto', 'important');
+            }
+          }, 500);
+          
+          // SIMPLE FUNCTION: Only set z-index when panel is visible, don't force anything
+          function ensureBottomNavbarPanelsAboveTop() {
+            const PANEL_Z_INDEX = 100020;
+            
+            // Find all fixed right-side panels
+            const rightPanels = document.querySelectorAll('div.fixed.inset-y-0.right-0');
+            rightPanels.forEach(function(panel) {
+              // Skip navbars
+              if (panel.classList.contains('naf-top-bar-right') || 
+                  panel.classList.contains('naf-bottom-bar-center')) {
+                return;
+              }
+              
+              // Only set z-index if panel is visible (let SolidJS control visibility)
+              const style = window.getComputedStyle(panel);
+              if (style.display !== 'none' && style.visibility !== 'hidden') {
+                const currentZ = parseInt(style.zIndex) || 0;
+                if (currentZ < PANEL_Z_INDEX) {
+                  panel.style.zIndex = PANEL_Z_INDEX;
+                }
+              }
+            });
+            
+            // Settings screen
+            const settingsScreens = document.querySelectorAll('.naf-centered-fullscreen');
+            settingsScreens.forEach(function(screen) {
+              const style = window.getComputedStyle(screen);
+              if (style.display !== 'none' && style.visibility !== 'hidden') {
+                const currentZ = parseInt(style.zIndex) || 0;
+                if (currentZ < PANEL_Z_INDEX) {
+                  screen.style.zIndex = PANEL_Z_INDEX;
+                }
+              }
+            });
+            
+            // Item detail modal
+            const itemModals = document.querySelectorAll('[class*="z-[60]"]');
+            itemModals.forEach(function(modal) {
+              const style = window.getComputedStyle(modal);
+              if (style.display !== 'none' && style.visibility !== 'hidden') {
+                const currentZ = parseInt(style.zIndex) || 0;
+                if (currentZ < PANEL_Z_INDEX) {
+                  modal.style.zIndex = PANEL_Z_INDEX;
+                }
+              }
+            });
+          }
+          
+          // Simple wrapper functions
+          function ensureSettingsScreenVisible() {
+            ensureBottomNavbarPanelsAboveTop();
+          }
+          
+          function ensureItemDetailPopupVisible() {
+            ensureBottomNavbarPanelsAboveTop();
+          }
+          
+          // Make function globally accessible
+          window.ensureBottomNavbarPanelsAboveTop = ensureBottomNavbarPanelsAboveTop;
+          
+          // MutationObserver specifically for navbar to prevent it from being hidden
+          let navbarProtectionObserver = null;
+          function startNavbarProtection() {
+            if (navbarProtectionObserver) return;
+            
+            navbarProtectionObserver = new MutationObserver(function(mutations) {
+              if (!window.__gameStarted) return;
+              
+              mutations.forEach(function(mutation) {
+                if (mutation.type === 'attributes' && 
+                    (mutation.attributeName === 'style' || mutation.attributeName === 'class')) {
+                  const target = mutation.target;
+                  
+                  // Protect bottom navbar
+                  if (target.classList && target.classList.contains('naf-bottom-bar-center')) {
+                    const computedStyle = window.getComputedStyle(target);
+                    const isHidden = computedStyle.display === 'none' || 
+                                    computedStyle.visibility === 'hidden' || 
+                                    parseFloat(computedStyle.opacity) < 0.1;
+                    
+                    if (isHidden) {
+                      console.warn('[NavbarProtection] ⚠️ Blocked attempt to hide bottom navbar');
+                      ensureBottomNavbarClickable();
+                    }
+                  }
+                }
+              });
+            });
+            
+            // Observe bottom navbar specifically
+            const bottomBar = document.querySelector('.naf-bottom-bar-center');
+            if (bottomBar) {
+              navbarProtectionObserver.observe(bottomBar, {
+                attributes: true,
+                attributeFilter: ['style', 'class'],
+                childList: true,
+                subtree: true
+              });
+            }
+          }
+          
+          // Start navbar protection after a delay
+          setTimeout(startNavbarProtection, 1500);
+          
+          // Periodic check - less frequent to avoid interfering with SolidJS
+          setInterval(() => {
+            if (window.__gameStarted) {
+              ensureBottomNavbarClickable();
+              ensureTopNavbarClickable();
+              // Only check z-index, don't interfere with visibility
+              ensureBottomNavbarPanelsAboveTop();
+              
+              // CRITICAL: Pastikan GameHUD tetap terlihat dan timer tetap berjalan
+              const gameHUD = document.querySelector('[data-gamehud]');
+              if (gameHUD) {
+                gameHUD.style.setProperty('display', 'flex', 'important');
+                gameHUD.style.setProperty('visibility', 'visible', 'important');
+                gameHUD.style.setProperty('opacity', '1', 'important');
+                gameHUD.style.setProperty('z-index', '100021', 'important');
+              }
+              
+              // Pastikan timer tetap berjalan
+              if (window.gameProgress && typeof window.gameProgress.ensureTimerRunning === 'function') {
+                window.gameProgress.ensureTimerRunning();
+              }
+            }
+          }, 3000); // Check every 3 seconds
+          
+          // More frequent check for navbar (every 300ms) to catch rapid changes
+          setInterval(() => {
+            if (window.__gameStarted) {
+              const bottomBar = document.querySelector('.naf-bottom-bar-center');
+              if (bottomBar) {
+                const computedStyle = window.getComputedStyle(bottomBar);
+                const isHidden = computedStyle.display === 'none' || 
+                                computedStyle.visibility === 'hidden' || 
+                                parseFloat(computedStyle.opacity) < 0.1;
+                
+                if (isHidden) {
+                  console.warn('[Navbar] ⚠️ Navbar detected as hidden, restoring...');
+                  ensureBottomNavbarClickable();
+                }
+              }
+            }
+          }, 300);
+          
+          // Also check when DOM changes (new buttons might be added)
+          const navbarObserver = new MutationObserver(function(mutations) {
+            if (!window.__gameStarted) return;
+            
+            let shouldCheckNavbar = false;
+            let shouldCheckPanels = false;
+            
+            mutations.forEach(function(mutation) {
+              // Check if navbar or its children were modified
+              if (mutation.type === 'attributes') {
+                const target = mutation.target;
+                if (target.classList && (
+                  target.classList.contains('naf-bottom-bar-center') ||
+                  target.closest('.naf-bottom-bar-center')
+                )) {
+                  shouldCheckNavbar = true;
+                }
+                
+                // Check if panel was added/modified
+                if (target.hasAttribute && (
+                  target.hasAttribute('data-backpack-panel') ||
+                  target.hasAttribute('data-chat-panel') ||
+                  target.hasAttribute('data-users-panel') ||
+                  target.hasAttribute('data-quiz-panel') ||
+                  target.classList.contains('naf-centered-fullscreen') ||
+                  target.classList.contains('z-[60]')
+                )) {
+                  shouldCheckPanels = true;
+                }
+              }
+              
+              // Check if navbar or panels were added/removed
+              if (mutation.type === 'childList') {
+                mutation.addedNodes.forEach(function(node) {
+                  if (node.nodeType === 1) {
+                    if (node.classList && node.classList.contains('naf-bottom-bar-center')) {
+                      shouldCheckNavbar = true;
+                    }
+                    if (node.querySelector && node.querySelector('.naf-bottom-bar-center')) {
+                      shouldCheckNavbar = true;
+                    }
+                    
+                // Check for panels by class (not data attributes)
+                if (node.classList) {
+                  // Check for right-side panels (backpack, chat, users, etc.)
+                  if (node.classList.contains('fixed') && 
+                      (node.classList.contains('inset-y-0') || node.className.includes('inset-y-0')) &&
+                      (node.classList.contains('right-0') || node.className.includes('right-0'))) {
+                    // Make sure it's not navbar
+                    if (!node.classList.contains('naf-top-bar-right') && 
+                        !node.classList.contains('naf-bottom-bar-center')) {
+                      shouldCheckPanels = true;
+                      console.log('[PanelFix] Detected new panel:', node.className);
+                    }
+                  }
+                  
+                  // Check for settings screen
+                  if (node.classList.contains('naf-centered-fullscreen')) {
+                    shouldCheckPanels = true;
+                    console.log('[PanelFix] Detected settings screen');
+                  }
+                  
+                  // Check for item modal
+                  if (node.className.includes('z-[60]') || node.className.includes('z-\\[60\\]')) {
+                    shouldCheckPanels = true;
+                    console.log('[PanelFix] Detected item modal');
+                  }
+                }
+                
+                // Check if node contains panels
+                if (node.querySelector) {
+                  const fixedRightPanel = node.querySelector('div.fixed.inset-y-0.right-0, div[class*="fixed"][class*="inset-y-0"][class*="right-0"]');
+                  if (fixedRightPanel && 
+                      !fixedRightPanel.classList.contains('naf-top-bar-right') && 
+                      !fixedRightPanel.classList.contains('naf-bottom-bar-center')) {
+                    shouldCheckPanels = true;
+                    console.log('[PanelFix] Detected panel in subtree');
+                  }
+                  
+                  if (node.querySelector('.naf-centered-fullscreen, [class*="z-[60]"]')) {
+                    shouldCheckPanels = true;
+                  }
+                }
+                  }
+                });
+              }
+            });
+            
+            if (shouldCheckNavbar) {
+              // Debounce navbar check
+              setTimeout(function() {
+                ensureBottomNavbarClickable();
+                ensureTopNavbarClickable();
+              }, 50);
+            }
+            
+            if (shouldCheckPanels) {
+              // Wait a bit for SolidJS to finish rendering, then fix z-index
+              setTimeout(ensureBottomNavbarPanelsAboveTop, 100);
+            }
+          });
+          
+          // Observe body for new navbar elements and settings screens
+          setTimeout(() => {
+            const body = document.body;
+            if (body) {
+              navbarObserver.observe(body, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['style', 'class']
+              });
+            }
+          }, 1000);
+          
+          // Simple document click listener - don't interfere, just fix z-index
+          document.addEventListener('click', function(e) {
+            const target = e.target;
+            if (!target) return;
+            
+            const bottomBar = document.querySelector('.naf-bottom-bar-center');
+            if (bottomBar && (bottomBar.contains(target) || target.closest('.naf-bottom-bar-center'))) {
+              forceShowNavbarAfterClick();
+              // Fix z-index after delays to let SolidJS render
+              setTimeout(ensureBottomNavbarPanelsAboveTop, 300);
+              setTimeout(ensureBottomNavbarPanelsAboveTop, 800);
+            }
+          }, true);
+          
+          // Also listen for touch events (mobile)
+          document.addEventListener('touchstart', function(e) {
+            const target = e.target;
+            if (!target) return;
+            
+            const bottomBar = document.querySelector('.naf-bottom-bar-center');
+            if (bottomBar && (bottomBar.contains(target) || target.closest('.naf-bottom-bar-center'))) {
+              console.log('[Navbar] Touch detected on bottom navbar');
+              forceShowNavbarAfterClick();
+              ensureBottomNavbarPanelsAboveTop();
+            }
+          }, true);
+          
+          // CRITICAL FIX: Don't clone/replace buttons - that removes SolidJS event handlers!
+          // Just add a passive listener that doesn't interfere
+          function attachNavbarButtonHandlers() {
+            const bottomBar = document.querySelector('.naf-bottom-bar-center');
+            if (!bottomBar) return;
+            
+            // Get all buttons in navbar
+            const buttons = bottomBar.querySelectorAll('button, [role="button"], .btn, .btn-secondary, .btn-rounded');
+            buttons.forEach(function(button) {
+              // Only add if not already marked - don't clone/replace!
+              if (button.dataset.zIndexHandlerAdded) return;
+              button.dataset.zIndexHandlerAdded = 'true';
+              
+              // Add passive listener that only fixes z-index, doesn't interfere with SolidJS
+              // Use capture: false so SolidJS handler runs first
+              button.addEventListener('click', function(e) {
+                // Don't prevent default or stop propagation - let SolidJS handle it!
+                // Just fix z-index after delays
+                setTimeout(ensureBottomNavbarPanelsAboveTop, 300);
+                setTimeout(ensureBottomNavbarPanelsAboveTop, 800);
+              }, { passive: true, capture: false });
+            });
+          }
+          
+          // Attach handlers initially
+          setTimeout(attachNavbarButtonHandlers, 2000);
+          
+          // Re-attach handlers when navbar changes (new buttons added)
+          const buttonObserver = new MutationObserver(function() {
+            attachNavbarButtonHandlers();
+          });
+          
+          setTimeout(() => {
+            const bottomBar = document.querySelector('.naf-bottom-bar-center');
+            if (bottomBar) {
+              buttonObserver.observe(bottomBar, {
+                childList: true,
+                subtree: true
+              });
+            }
+          }, 2500);
+          
+          // Listen for close music settings event
+          window.addEventListener('closeMusicSettings', function() {
+            console.log('[Settings] Close music settings event received');
+            // Settings screen will be hidden by SolidJS, no need to force hide
+            // But ensure navbar is visible after settings closes
+            setTimeout(function() {
+              forceShowNavbarAfterClick();
+            }, 100);
+            
+            // Pastikan GameHUD tetap terlihat setelah settings ditutup
+            setTimeout(function() {
+              const gameHUD = document.querySelector('[data-gamehud]');
+              if (gameHUD) {
+                gameHUD.style.setProperty('display', 'flex', 'important');
+                gameHUD.style.setProperty('visibility', 'visible', 'important');
+                gameHUD.style.setProperty('opacity', '1', 'important');
+                gameHUD.style.setProperty('z-index', '100021', 'important');
+                console.log('[Settings] ✅ GameHUD ensured visible after settings closed');
+              }
+            }, 200);
+          });
+          
+          // CRITICAL: Pastikan GameHUD tetap terlihat meskipun settings dibuka
+          // Monitor terus-menerus dan force show GameHUD
+          let lastMusicSettingsState = false;
+          const gameHUDVisibilityInterval = setInterval(function() {
+            // Check if settings is open by looking for MusicSettingsScreen
+            const settingsScreen = document.querySelector('.naf-centered-fullscreen');
+            const isSettingsOpen = settingsScreen && window.getComputedStyle(settingsScreen).display !== 'none';
+            
+            if (isSettingsOpen !== lastMusicSettingsState) {
+              lastMusicSettingsState = isSettingsOpen;
+              console.log('[Settings] Settings state changed:', isSettingsOpen);
+            }
+            
+            // SELALU pastikan GameHUD tetap terlihat (meskipun settings dibuka)
+            const gameHUD = document.querySelector('[data-gamehud]');
+            if (gameHUD && window.__gameStarted) {
+              const computedStyle = window.getComputedStyle(gameHUD);
+              const isHidden = computedStyle.display === 'none' || 
+                              computedStyle.visibility === 'hidden' || 
+                              parseFloat(computedStyle.opacity) < 0.1;
+              
+              if (isHidden) {
+                console.log('[Settings] ⚠️ GameHUD was hidden, forcing visible...');
+              }
+              
+              // FORCE SHOW - selalu tampilkan GameHUD di solo mode
+              gameHUD.style.setProperty('display', 'flex', 'important');
+              gameHUD.style.setProperty('visibility', 'visible', 'important');
+              gameHUD.style.setProperty('opacity', '1', 'important');
+              gameHUD.style.setProperty('z-index', '100021', 'important');
+              gameHUD.style.setProperty('position', 'fixed', 'important');
+              gameHUD.style.setProperty('top', '20px', 'important');
+              gameHUD.style.setProperty('left', '20px', 'important');
+              gameHUD.style.setProperty('transform', 'none', 'important');
+              gameHUD.style.setProperty('will-change', 'auto', 'important');
+              gameHUD.style.setProperty('pointer-events', 'auto', 'important');
+              
+              // Pastikan timer tetap berjalan
+              if (window.gameProgress && typeof window.gameProgress.ensureTimerRunning === 'function') {
+                window.gameProgress.ensureTimerRunning();
+              }
+            }
+          }, 200); // Check every 200ms - lebih agresif
+          
+          // Listen for any modal/popup close events
+          document.addEventListener('click', function(e) {
+            const target = e.target;
+            if (!target) return;
+            
+            // Check if click is on close button or backdrop
+            const isCloseButton = target.closest('button[aria-label*="close" i], button[title*="close" i], .close, [data-close]') ||
+                                 target.classList.contains('close') ||
+                                 (target.textContent && target.textContent.toLowerCase().includes('tutup'));
+            
+            const isBackdrop = target.classList.contains('bg-black') || 
+                              target.classList.contains('backdrop') ||
+                              (target.style && target.style.backgroundColor && target.style.backgroundColor.includes('rgba(0, 0, 0'));
+            
+            if (isCloseButton || isBackdrop) {
+              // Modal is closing, ensure navbar is visible
+              setTimeout(function() {
+                forceShowNavbarAfterClick();
+              }, 200);
+            }
+          }, true);
+          
+          // Show virtual joystick AFTER experience started (so GameHUD appears first)
+          // Only show on touch devices (mobile)
+          setTimeout(() => {
+            const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || 
+                                 (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+            const virtualJoystick = document.getElementById('virtual-joystick');
+            console.log('[Joystick] Checking visibility - isTouchDevice:', isTouchDevice, 'joystick element:', !!virtualJoystick);
+            if (virtualJoystick && isTouchDevice) {
+              virtualJoystick.dataset.active = 'true';
+              virtualJoystick.style.setProperty('display', 'block', 'important');
+              virtualJoystick.style.setProperty('visibility', 'visible', 'important');
+              virtualJoystick.style.setProperty('opacity', '1', 'important');
+              virtualJoystick.style.setProperty('z-index', '998', 'important');
+              virtualJoystick.style.setProperty('pointer-events', 'all', 'important');
+              virtualJoystick.style.transition = 'opacity 0.3s ease';
+              virtualJoystick.classList.add('active');
+              console.log('[Joystick] ✅ Joystick shown on mobile device');
+            } else if (virtualJoystick && !isTouchDevice) {
+              // Hide joystick on desktop
+              virtualJoystick.style.setProperty('display', 'none', 'important');
+              virtualJoystick.classList.remove('active');
+              console.log('[Joystick] ❌ Joystick hidden on desktop');
+            }
+          }, 500);
+          
+          // Also check again after a delay to ensure joystick appears
+          setTimeout(() => {
+            const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || 
+                                 (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+            const virtualJoystick = document.getElementById('virtual-joystick');
+            if (virtualJoystick && isTouchDevice && !virtualJoystick.classList.contains('active')) {
+              virtualJoystick.dataset.active = 'true';
+              virtualJoystick.style.setProperty('display', 'block', 'important');
+              virtualJoystick.style.setProperty('visibility', 'visible', 'important');
+              virtualJoystick.style.setProperty('opacity', '1', 'important');
+              virtualJoystick.style.setProperty('z-index', '998', 'important');
+              virtualJoystick.style.setProperty('pointer-events', 'all', 'important');
+              virtualJoystick.classList.add('active');
+              console.log('[Joystick] ✅ Joystick shown on mobile device (retry)');
+            }
+          }, 1500);
+          
+          // Cleanup on page unload
+          window.addEventListener('beforeunload', function() {
+            stopSceneGuard();
+            if (styleProtectionObserver) {
+              styleProtectionObserver.disconnect();
+              styleProtectionObserver = null;
+            }
+          });
+          
+          // Fix player position to ground after scene loaded
+          setTimeout(() => {
+            const rig = document.getElementById('rig');
+            if (rig) {
+              // Force re-init ground-constraint component
+              const groundConstraint = rig.components['ground-constraint'];
+              if (groundConstraint && groundConstraint.setupGroundEntities) {
+                groundConstraint.setupGroundEntities();
+              }
+              
+              // Force player to ground level after a short delay
+              setTimeout(() => {
+                const currentPos = rig.getAttribute('position') || { x: 0, y: 0, z: 0 };
+                const posX = typeof currentPos === 'string' ? parseFloat(currentPos.split(/\s+/)[0]) : (currentPos.x || 0);
+                const posZ = typeof currentPos === 'string' ? parseFloat(currentPos.split(/\s+/)[2]) : (currentPos.z || 0);
+                rig.setAttribute('position', `${posX} 0 ${posZ}`);
+                
+                // Check again after navmesh constraint applies
+                setTimeout(() => {
+                  const pos = rig.getAttribute('position');
+                  const posY = typeof pos === 'string' ? parseFloat(pos.split(/\s+/)[1]) : (pos?.y || 0);
+                  // If player is floating (y > 1) or too low (y < -0.5), adjust to ground
+                  if (posY > 1 || posY < -0.5) {
+                    rig.setAttribute('position', `${posX} 0 ${posZ}`);
+                  }
+                }, 1000);
+              }, 500);
+            }
+          }, 1000);
+        }, 200);
+      };
+    </script>
+    
+    <!-- Virtual Joystick Script -->
+    <script>
+      (function() {
+        // Wait for DOM to be ready
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', initJoystick);
+        } else {
+          initJoystick();
+        }
+        
+        function initJoystick() {
+          const joystick = document.getElementById('virtual-joystick');
+          const joystickBase = document.getElementById('joystick-base');
+          const joystickStick = document.getElementById('joystick-stick');
+          
+          if (!joystick || !joystickBase || !joystickStick) {
+            console.warn('[Joystick] Elements not found');
+            return;
+          }
+          
+          let isActive = false;
+          let touchId = null;
+          let baseRect = null;
+          let centerX = 0;
+          let centerY = 0;
+          let maxDistance = 0;
+          let resetTimeout = null;
+          let lastUpdateTime = 0;
+          
+          // Active keys being pressed
+          const activeKeys = {
+            w: false,
+            s: false,
+            a: false,
+            d: false
+          };
+          
+          // Safety mechanism: Force reset if joystick gets stuck
+          function forceReset() {
+            console.warn('[Joystick] ⚠️ Force reset triggered');
+            isActive = false;
+            touchId = null;
+            joystickStick.classList.remove('active');
+            joystickStick.style.transform = 'translate(-50%, -50%)';
+            releaseAllKeys();
+            if (resetTimeout) {
+              clearTimeout(resetTimeout);
+              resetTimeout = null;
+            }
+          }
+          
+          // Safety check: Reset if no update for too long
+          function startSafetyTimer() {
+            if (resetTimeout) clearTimeout(resetTimeout);
+            resetTimeout = setTimeout(() => {
+              if (isActive) {
+                console.warn('[Joystick] ⚠️ Safety timeout - resetting');
+                forceReset();
+              }
+            }, 2000); // Reset after 2 seconds of no updates
+          }
+          
+          // Clear safety timer
+          function clearSafetyTimer() {
+            if (resetTimeout) {
+              clearTimeout(resetTimeout);
+              resetTimeout = null;
+            }
+          }
+          
+          // Helper function to create keyboard event
+          // CRITICAL: Mark event sebagai berasal dari joystick agar tidak diblokir
+          function createKeyEvent(type, key, code, keyCode) {
+            const event = new KeyboardEvent(type, {
+              key: key,
+              code: code,
+              keyCode: keyCode,
+              which: keyCode,
+              bubbles: true,
+              cancelable: true
+            });
+            // Mark event sebagai berasal dari joystick
+            event.__fromJoystick = true;
+            if (window.__joystickEvents) {
+              window.__joystickEvents.add(event);
+            }
+            return event;
+          }
+          
+          // Simulate keyboard press/release
+          function pressKey(key, code, keyCode) {
+            if (activeKeys[key]) return;
+            
+            activeKeys[key] = true;
+            const event = createKeyEvent('keydown', key, code, keyCode);
+            window.dispatchEvent(event);
+            document.dispatchEvent(event);
+            
+            const rig = document.getElementById('rig');
+            if (rig) {
+              rig.dispatchEvent(event);
+            }
+          }
+          
+          function releaseKey(key, code, keyCode) {
+            if (!activeKeys[key]) return;
+            
+            activeKeys[key] = false;
+            const event = createKeyEvent('keyup', key, code, keyCode);
+            window.dispatchEvent(event);
+            document.dispatchEvent(event);
+            
+            const rig = document.getElementById('rig');
+            if (rig) {
+              rig.dispatchEvent(event);
+            }
+          }
+          
+          // Release all keys
+          function releaseAllKeys() {
+            if (activeKeys.w) releaseKey('w', 'KeyW', 87);
+            if (activeKeys.s) releaseKey('s', 'KeyS', 83);
+            if (activeKeys.a) releaseKey('a', 'KeyA', 65);
+            if (activeKeys.d) releaseKey('d', 'KeyD', 68);
+          }
+          
+          // Update movement based on joystick position
+          function updateMovement(x, y) {
+            // Update last update time for safety check
+            lastUpdateTime = Date.now();
+            
+            // Only update if joystick is active
+            if (!isActive) {
+              releaseAllKeys();
+              return;
+            }
+            
+            const distance = Math.sqrt(x * x + y * y);
+            const normalizedDistance = Math.min(distance / maxDistance, 1);
+            
+            // Dead zone: release all keys if too close to center
+            if (normalizedDistance < 0.1) {
+              releaseAllKeys();
+              return;
+            }
+            
+            // Calculate angle (y is inverted, so forward is negative y)
+            // atan2 returns -180 to 180, we want 0-360
+            const angle = Math.atan2(-y, x);
+            let degrees = (angle * 180) / Math.PI;
+            if (degrees < 0) degrees += 360;
+            
+            // Determine which keys to press based on angle
+            // Using simple threshold-based approach
+            const shouldPress = {
+              w: false, // Forward (up)
+              s: false, // Backward (down)
+              a: false, // Left
+              d: false  // Right
+            };
+            
+            // Forward (W) - top quadrant (270° to 90°)
+            if (degrees >= 270 || degrees <= 90) {
+              shouldPress.w = true;
+            }
+            
+            // Backward (S) - bottom quadrant (90° to 270°)
+            if (degrees >= 90 && degrees <= 270) {
+              shouldPress.s = true;
+            }
+            
+            // Left (A) - left quadrant (180° ± 90°)
+            if (degrees >= 90 && degrees <= 270) {
+              shouldPress.a = true;
+            }
+            
+            // Right (D) - right quadrant (270° to 90°)
+            if (degrees >= 270 || degrees <= 90) {
+              shouldPress.d = true;
+            }
+            
+            // For more precise control, use absolute thresholds
+            const absX = Math.abs(x);
+            const absY = Math.abs(y);
+            const threshold = maxDistance * 0.3; // 30% threshold
+            
+            // Horizontal movement
+            if (absX > threshold) {
+              if (x > 0) {
+                shouldPress.d = true;
+                shouldPress.a = false;
+              } else {
+                shouldPress.a = true;
+                shouldPress.d = false;
+              }
+            } else {
+              // No horizontal movement
+              shouldPress.a = false;
+              shouldPress.d = false;
+            }
+            
+            // Vertical movement
+            // Note: Y is already inverted in updateStickPosition (updateMovement(stickX, -stickY))
+            // So: y > 0 means forward (up), y < 0 means backward (down)
+            if (absY > threshold) {
+              if (y > 0) { // Positive Y (after inversion) is forward (up/maju)
+                shouldPress.w = true;
+                shouldPress.s = false;
+              } else { // Negative Y (after inversion) is backward (down/mundur)
+                shouldPress.s = true;
+                shouldPress.w = false;
+              }
+            } else {
+              // No vertical movement
+              shouldPress.w = false;
+              shouldPress.s = false;
+            }
+            
+            // Release keys that shouldn't be pressed FIRST (important!)
+            if (!shouldPress.w && activeKeys.w) {
+              releaseKey('w', 'KeyW', 87);
+            }
+            if (!shouldPress.s && activeKeys.s) {
+              releaseKey('s', 'KeyS', 83);
+            }
+            if (!shouldPress.a && activeKeys.a) {
+              releaseKey('a', 'KeyA', 65);
+            }
+            if (!shouldPress.d && activeKeys.d) {
+              releaseKey('d', 'KeyD', 68);
+            }
+            
+            // Then press keys that should be pressed
+            if (shouldPress.w && !activeKeys.w) {
+              pressKey('w', 'KeyW', 87);
+            }
+            if (shouldPress.s && !activeKeys.s) {
+              pressKey('s', 'KeyS', 83);
+            }
+            if (shouldPress.a && !activeKeys.a) {
+              pressKey('a', 'KeyA', 65);
+            }
+            if (shouldPress.d && !activeKeys.d) {
+              pressKey('d', 'KeyD', 68);
+            }
+          }
+          
+          // Initialize joystick base position
+          function updateBaseRect() {
+            baseRect = joystickBase.getBoundingClientRect();
+            centerX = baseRect.left + baseRect.width / 2;
+            centerY = baseRect.top + baseRect.height / 2;
+            maxDistance = baseRect.width / 2 - joystickStick.offsetWidth / 2;
+          }
+          
+          // Update stick position
+          function updateStickPosition(clientX, clientY) {
+            // Safety check
+            if (!isActive) {
+              releaseAllKeys();
+              return;
+            }
+            
+            // Update base rect in case it changed
+            updateBaseRect();
+            
+            const dx = clientX - centerX;
+            const dy = clientY - centerY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const maxDist = maxDistance;
+            
+            let stickX, stickY;
+            
+            if (distance > maxDist) {
+              // Clamp to max distance
+              const angle = Math.atan2(dy, dx);
+              stickX = Math.cos(angle) * maxDist;
+              stickY = Math.sin(angle) * maxDist;
+            } else {
+              stickX = dx;
+              stickY = dy;
+            }
+            
+            // Update visual position
+            joystickStick.style.transform = `translate(calc(-50% + ${stickX}px), calc(-50% + ${stickY}px))`;
+            
+            // Update movement (invert Y because screen Y is inverted from game Y)
+            updateMovement(stickX, -stickY);
+          }
+          
+          // Touch start
+          function onTouchStart(e) {
+            // If already active, reset first (safety)
+            if (isActive) {
+              console.warn('[Joystick] ⚠️ Touch start while active, resetting first');
+              forceReset();
+            }
+            
+            if (!e.touches || e.touches.length === 0) return;
+            
+            const touch = e.touches[0];
+            touchId = touch.identifier;
+            isActive = true;
+            
+            updateBaseRect();
+            joystickStick.classList.add('active');
+            
+            // Start safety timer
+            startSafetyTimer();
+            
+            e.preventDefault();
+            e.stopPropagation();
+            updateStickPosition(touch.clientX, touch.clientY);
+          }
+          
+          // Touch move
+          function onTouchMove(e) {
+            if (!isActive) return;
+            
+            // Find our touch
+            const touch = Array.from(e.touches || []).find(t => t.identifier === touchId);
+            if (!touch) {
+              // Touch lost, reset
+              console.warn('[Joystick] ⚠️ Touch lost during move, resetting');
+              forceReset();
+              return;
+            }
+            
+            // Reset safety timer on each move
+            startSafetyTimer();
+            
+            e.preventDefault();
+            e.stopPropagation();
+            updateStickPosition(touch.clientX, touch.clientY);
+          }
+          
+          // Touch end
+          function onTouchEnd(e) {
+            if (!isActive) return;
+            
+            // Check if this is our touch
+            const touch = Array.from(e.changedTouches || []).find(t => t.identifier === touchId);
+            if (!touch && touchId !== null) {
+              // Different touch ended, ignore
+              return;
+            }
+            
+            // Reset state
+            isActive = false;
+            touchId = null;
+            
+            joystickStick.classList.remove('active');
+            joystickStick.style.transform = 'translate(-50%, -50%)';
+            
+            // Clear safety timer
+            clearSafetyTimer();
+            
+            // Release all keys
+            releaseAllKeys();
+            
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          
+          // Touch cancel (same as end)
+          function onTouchCancel(e) {
+            console.log('[Joystick] Touch cancelled');
+            onTouchEnd(e);
+          }
+          
+          // Global touch end handler to catch touches that end outside joystick
+          function onGlobalTouchEnd(e) {
+            if (!isActive || touchId === null) return;
+            
+            // Check if our touch ended
+            const touch = Array.from(e.changedTouches || []).find(t => t.identifier === touchId);
+            if (touch) {
+              console.log('[Joystick] Touch ended outside joystick area');
+              forceReset();
+            }
+          }
+          
+          // Global touch cancel handler
+          function onGlobalTouchCancel(e) {
+            if (!isActive || touchId === null) return;
+            
+            const touch = Array.from(e.changedTouches || []).find(t => t.identifier === touchId);
+            if (touch) {
+              console.log('[Joystick] Touch cancelled globally');
+              forceReset();
+            }
+          }
+          
+          // Add event listeners to joystick base
+          joystickBase.addEventListener('touchstart', onTouchStart, { passive: false });
+          joystickBase.addEventListener('touchmove', onTouchMove, { passive: false });
+          joystickBase.addEventListener('touchend', onTouchEnd, { passive: false });
+          joystickBase.addEventListener('touchcancel', onTouchCancel, { passive: false });
+          
+          // Add global listeners to catch lost touches
+          document.addEventListener('touchend', onGlobalTouchEnd, { passive: true });
+          document.addEventListener('touchcancel', onGlobalTouchCancel, { passive: true });
+          
+          // Handle visibility change (user switches apps, etc.)
+          document.addEventListener('visibilitychange', function() {
+            if (document.hidden && isActive) {
+              console.log('[Joystick] Page hidden, resetting joystick');
+              forceReset();
+            }
+          });
+          
+          // Handle page blur (user switches tabs, etc.)
+          window.addEventListener('blur', function() {
+            if (isActive) {
+              console.log('[Joystick] Window blurred, resetting joystick');
+              forceReset();
+            }
+          });
+          
+          // Periodic safety check (every 500ms)
+          setInterval(function() {
+            if (isActive) {
+              // Check if touch still exists
+              const timeSinceUpdate = Date.now() - lastUpdateTime;
+              if (timeSinceUpdate > 1000) {
+                console.warn('[Joystick] ⚠️ No updates for 1 second, resetting');
+                forceReset();
+              }
+            }
+          }, 500);
+          
+          // Update base rect on resize
+          window.addEventListener('resize', updateBaseRect);
+          
+          // Cleanup function
+          window.cleanupJoystick = function() {
+            forceReset();
+            document.removeEventListener('touchend', onGlobalTouchEnd);
+            document.removeEventListener('touchcancel', onGlobalTouchCancel);
+          };
+        }
+      })();
+    </script>
+    
+    <!-- Script to ensure item detail popup is always at front -->
+    <script>
+      (function() {
+        let processedPopups = new WeakSet();
+        
+        // Function to force z-index on popup elements
+        function forcePopupToFront() {
+          // Find all elements with z-[60] class (item detail popup from backpack)
+          const popups = document.querySelectorAll('[class*="z-[60]"]');
+          
+          popups.forEach(function(popup) {
+            // Skip if already processed
+            if (processedPopups.has(popup)) return;
+            
+            // Check if element has z-[60] in its class list
+            const classes = popup.className || '';
+            if (classes.includes('z-[60]') || classes.includes('z-\\[60\\]')) {
+              const computedStyle = window.getComputedStyle(popup);
+              // Only adjust z-index if popup is actually visible (not hidden by SolidJS)
+              if (computedStyle.display !== 'none' && computedStyle.visibility !== 'hidden') {
+                const computedZ = parseInt(computedStyle.zIndex) || 0;
+                // Only set z-index if it's lower than needed
+                if (computedZ < 100020) {
+                  popup.style.setProperty('z-index', '100020', 'important');
+                }
+                
+                // Ensure modal content is also above
+                const modalContent = popup.querySelector('.bg-white, .rounded-2xl');
+                if (modalContent) {
+                  const contentZ = parseInt(window.getComputedStyle(modalContent).zIndex) || 0;
+                  if (contentZ < 100021) {
+                    modalContent.style.setProperty('z-index', '100021', 'important');
+                  }
+                }
+              }
+              
+              // Mark as processed
+              processedPopups.add(popup);
+            }
+          });
+          
+          // Also ensure all panels from bottom navbar are above top navbar
+          if (window.ensureBottomNavbarPanelsAboveTop && typeof window.ensureBottomNavbarPanelsAboveTop === 'function') {
+            window.ensureBottomNavbarPanelsAboveTop();
+          }
+        }
+        
+        // Run immediately
+        forcePopupToFront();
+        
+        // Watch for new elements being added to DOM (throttled)
+        let checkTimeout = null;
+        const observer = new MutationObserver(function(mutations) {
+          let shouldCheck = false;
+          mutations.forEach(function(mutation) {
+            if (mutation.addedNodes.length > 0) {
+              mutation.addedNodes.forEach(function(node) {
+                if (node.nodeType === 1) { // Element node
+                  const classes = node.className || '';
+                  if (classes.includes('z-[60]') || classes.includes('z-\\[60\\]') || 
+                      (node.querySelector && node.querySelector('[class*="z-[60]"]'))) {
+                    shouldCheck = true;
+                  }
+                }
+              });
+            }
+          });
+          
+          if (shouldCheck) {
+            // Throttle checks
+            if (checkTimeout) clearTimeout(checkTimeout);
+            checkTimeout = setTimeout(function() {
+              forcePopupToFront();
+              // Also call ensureItemDetailPopupVisible if available
+              if (window.ensureItemDetailPopupVisible && typeof window.ensureItemDetailPopupVisible === 'function') {
+                window.ensureItemDetailPopupVisible();
+              }
+            }, 200);
+          }
+        });
+        
+        // Start observing
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true
+        });
+      })();
+    </script>
+    
+    <!-- Script untuk memastikan player berada di atas collision floor setelah teleport -->
+    <script>
+      (function() {
+        // Mapping posisi spawn dan collision floor untuk setiap rumah
+        const houseFloors = {
+          // Rumah Panjang Kalbar: spawn Y = 2.9, floor Y = 2.8
+          '-70 2.9 20': { floorY: 2.8, x: -70, z: 20 },
+          // Rumah Honai: spawn Y = -0.3, floor Y = -0.4
+          '-58.5 -0.3 -25': { floorY: -0.4, x: -58.5, z: -25 },
+          // Rumah Krong: spawn Y = 2.9, floor Y = 2.8
+          '-47 2.9 9': { floorY: 2.8, x: -47, z: 9 },
+          // Rumah Batak: spawn Y = 2.5, floor Y = 2.4
+          '-77.51 2.5 -21': { floorY: 2.4, x: -77.51, z: -21 },
+          // Rumah Lampung: spawn Y = 3, floor Y = 2.9
+          '-21 3 -26': { floorY: 2.9, x: -21, z: -26 },
+          // Rumah Dayak: spawn Y = 3, floor Y = 2.9
+          '12 3 -36.5': { floorY: 2.9, x: 20, z: -36.5 },
+          // Rumah Joglo: spawn Y = 0.36, floor Y = 0.26
+          '-3.90 0.36 48.13': { floorY: 0.26, x: -3.90, z: 48.13 },
+          // Rumah Tolitoli: spawn Y = 2.32, floor Y = 2.22
+          '69.63 2.32 -20.60': { floorY: 2.22, x: 69.63, z: -20.60 },
+          // Rumah Saoraja: spawn Y = 2.79, floor Y = 2.69
+          '44 2.79 3.79': { floorY: 2.69, x: 44, z: 3.79 }
+        };
+        
+        // Listen untuk portal teleport event
+        document.addEventListener('portal-teleport', function(event) {
+          const targetPos = event.detail.to;
+          const posKey = `${targetPos.x} ${targetPos.y} ${targetPos.z}`;
+          
+          // Cek apakah ini posisi spawn di dalam rumah
+          const floorInfo = houseFloors[posKey];
+          
+          if (floorInfo) {
+            // Tunggu sedikit untuk memastikan teleport selesai
+            setTimeout(() => {
+              const rig = document.getElementById('rig');
+              if (!rig) return;
+              
+              const currentPos = rig.getAttribute('position');
+              const currentY = typeof currentPos === 'string' 
+                ? parseFloat(currentPos.split(/\s+/)[1]) 
+                : (currentPos?.y || targetPos.y);
+              
+              // Jika player jatuh terlalu rendah (lebih dari 0.2 dari floor), posisikan di atas floor
+              const expectedY = floorInfo.floorY + 0.1; // Player tinggi 1.6, camera di 1.6, jadi rig di floor + 0.1
+              if (currentY < floorInfo.floorY - 0.2 || Math.abs(currentY - expectedY) > 0.5) {
+                rig.setAttribute('position', {
+                  x: floorInfo.x,
+                  y: expectedY,
+                  z: floorInfo.z
+                });
+                rig.object3D.position.set(floorInfo.x, expectedY, floorInfo.z);
+              }
+            }, 400); // Tunggu fade effect selesai
+          }
+        });
+      })();
+    </script>
+    
+    <!-- Script untuk memastikan GameHUD tetap terlihat dan timer tetap berjalan meskipun settings dibuka -->
+    <script>
+      (function() {
+        // CRITICAL: Pastikan GameHUD tetap terlihat meskipun settings dibuka
+        // Monitor terus-menerus dan force show GameHUD setiap 200ms
+        let gameHUDForceShowInterval = null;
+        
+        function startGameHUDForceShow() {
+          if (gameHUDForceShowInterval) return;
+          
+          gameHUDForceShowInterval = setInterval(function() {
+            if (!window.__gameStarted) return;
+            
+            const gameHUD = document.querySelector('[data-gamehud]');
+            if (gameHUD) {
+              const computedStyle = window.getComputedStyle(gameHUD);
+              const isHidden = computedStyle.display === 'none' || 
+                              computedStyle.visibility === 'hidden' || 
+                              parseFloat(computedStyle.opacity) < 0.1;
+              
+              // FORCE SHOW GameHUD - selalu tampilkan di solo mode
+              gameHUD.style.setProperty('display', 'flex', 'important');
+              gameHUD.style.setProperty('visibility', 'visible', 'important');
+              gameHUD.style.setProperty('opacity', '1', 'important');
+              gameHUD.style.setProperty('z-index', '100021', 'important');
+              gameHUD.style.setProperty('position', 'fixed', 'important');
+              gameHUD.style.setProperty('top', '20px', 'important');
+              gameHUD.style.setProperty('left', '20px', 'important');
+              gameHUD.style.setProperty('transform', 'none', 'important');
+              gameHUD.style.setProperty('will-change', 'auto', 'important');
+              gameHUD.style.setProperty('pointer-events', 'auto', 'important');
+              
+              if (isHidden) {
+                console.log('[GameHUDForce] ⚠️ GameHUD was hidden, forced visible');
+              }
+              
+              // Pastikan timer tetap berjalan
+              if (window.gameProgress && typeof window.gameProgress.ensureTimerRunning === 'function') {
+                window.gameProgress.ensureTimerRunning();
+              }
+            }
+          }, 200); // Check every 200ms - sangat agresif
+          
+          console.log('[GameHUDForce] ✅ GameHUD force show interval started');
+        }
+        
+        // Start setelah game dimulai
+        function waitForGameStart() {
+          if (window.__gameStarted) {
+            startGameHUDForceShow();
+          } else {
+            setTimeout(waitForGameStart, 500);
+          }
+        }
+        
+        // Start monitoring
+        waitForGameStart();
+        
+        // Also start when enterGame is called
+        const originalEnterGame = window.enterGame;
+        if (originalEnterGame) {
+          window.enterGame = function() {
+            originalEnterGame();
+            setTimeout(startGameHUDForceShow, 1000);
+          };
+        }
+      })();
+    </script>
+    
+    <!-- Script untuk menonaktifkan ground-constraint saat di dalam rumah -->
+    <script>
+      (function() {
+        // Mapping area rumah adat (posisi X, Z dan radius)
+        const houseAreas = [
+          { x: -70, z: 20, radius: 15, floorY: 2.8, name: 'Rumah Panjang Kalbar' },
+          { x: -58.5, z: -25, radius: 5, floorY: -0.4, name: 'Rumah Honai' },
+          { x: -47, z: 9, radius: 15, floorY: 2.8, name: 'Rumah Krong' },
+          { x: -77.51, z: -21, radius: 8, floorY: 2.4, name: 'Rumah Batak' },
+          { x: -21, z: -26, radius: 8, floorY: 2.9, name: 'Rumah Lampung' },
+          { x: 20, z: -36.5, radius: 45, floorY: 2.9, name: 'Rumah Dayak' },
+          { x: -3.90, z: 48.13, radius: 9, floorY: 0.26, name: 'Rumah Joglo' },
+          { x: 69.63, z: -20.60, radius: 6, floorY: 2.22, name: 'Rumah Tolitoli' },
+          { x: 44, z: 3.79, radius: 9, floorY: 2.69, name: 'Rumah Saoraja' }
+        ];
+        
+        let isInsideHouse = false;
+        let groundConstraintDisabled = false;
+        let yLockEnabled = false;
+        let currentFloorY = null;
+        let lastCheckTime = 0;
+        let stateChangeTime = 0;
+        let pendingYLockActivation = null;
+        let lastConstraintCheckTime = 0;
+        let floorEventDebounce = null;
+        const CHECK_INTERVAL = 300; // Increased to 300ms for better performance
+        const STATE_CHANGE_DELAY = 500; // Delay before applying state changes (prevents flickering)
+        const HYSTERESIS_BUFFER = 1.5; // Buffer zone to prevent flickering at boundaries (meters)
+        
+        function checkIfInsideHouse(rig) {
+          if (!rig) return { inside: false, floorY: null };
+          
+          const pos = rig.getAttribute('position');
+          const posObj = typeof pos === 'string' 
+            ? { x: parseFloat(pos.split(/\s+/)[0]), z: parseFloat(pos.split(/\s+/)[2]) }
+            : (pos || { x: 0, z: 0 });
+          
+          for (const house of houseAreas) {
+            const dx = posObj.x - house.x;
+            const dz = posObj.z - house.z;
+            const distance = Math.sqrt(dx * dx + dz * dz);
+            
+            // Use hysteresis: if currently inside, use larger radius; if outside, use smaller radius
+            const effectiveRadius = isInsideHouse 
+              ? house.radius + HYSTERESIS_BUFFER  // Larger radius when inside (harder to exit)
+              : house.radius - HYSTERESIS_BUFFER; // Smaller radius when outside (harder to enter)
+            
+            if (distance <= effectiveRadius && effectiveRadius > 0) {
+              return { inside: true, floorY: house.floorY };
+            }
+          }
+          return { inside: false, floorY: null };
+        }
+        
+        function toggleConstraints(disable) {
+          const rig = document.getElementById('rig');
+          if (!rig) return;
+          
+          // Disable/enable ground-constraint
+          const groundConstraint = rig.components['ground-constraint'];
+          if (groundConstraint) {
+            if (disable && !groundConstraintDisabled) {
+              // Disable ground constraint dengan mengubah updateInterval menjadi sangat besar
+              const originalInterval = groundConstraint.data.updateInterval || 100;
+              if (!groundConstraint.originalInterval) {
+                groundConstraint.originalInterval = originalInterval;
+              }
+              rig.setAttribute('ground-constraint', 'updateInterval', 999999);
+              groundConstraintDisabled = true;
+            } else if (!disable && groundConstraintDisabled) {
+              // Re-enable ground constraint
+              const originalInterval = groundConstraint.originalInterval || 100;
+              rig.setAttribute('ground-constraint', 'updateInterval', originalInterval);
+              groundConstraintDisabled = false;
+            }
+          }
+          
+          // Disable/enable navmesh-constraint
+          const navmeshConstraint = rig.components['simple-navmesh-constraint'];
+          if (navmeshConstraint) {
+            if (disable) {
+              // Disable navmesh constraint dengan mengubah fall menjadi 0 dan height menjadi sangat besar
+              if (!navmeshConstraint.originalFall) {
+                navmeshConstraint.originalFall = navmeshConstraint.data.fall || 10;
+                navmeshConstraint.originalHeight = navmeshConstraint.data.height || 0;
+              }
+              rig.setAttribute('simple-navmesh-constraint', {
+                navmesh: navmeshConstraint.data.navmesh,
+                fall: 0,
+                height: 999,
+                exclude: navmeshConstraint.data.exclude || ''
+              });
+            } else {
+              // Re-enable navmesh constraint
+              if (navmeshConstraint.originalFall !== undefined) {
+                rig.setAttribute('simple-navmesh-constraint', {
+                  navmesh: navmeshConstraint.data.navmesh,
+                  fall: navmeshConstraint.originalFall,
+                  height: navmeshConstraint.originalHeight,
+                  exclude: navmeshConstraint.data.exclude || ''
+                });
+              }
+            }
+          }
+        }
+        
+        // Optimized check with throttling and debouncing
+        function performCheck() {
+          const now = performance.now();
+          if (now - lastCheckTime < CHECK_INTERVAL) return;
+          lastCheckTime = now;
+          
+          const rig = document.getElementById('rig');
+          if (!rig) return;
+          
+          const wasInsideHouse = isInsideHouse;
+          const houseCheck = checkIfInsideHouse(rig);
+          const newInsideHouse = houseCheck.inside;
+          
+          // Update currentFloorY jika di dalam rumah
+          if (newInsideHouse && houseCheck.floorY !== null) {
+            currentFloorY = houseCheck.floorY;
+          }
+          
+          // State change detected - start debounce timer
+          if (newInsideHouse !== wasInsideHouse) {
+            stateChangeTime = now;
+            // Clear any pending Y lock activation
+            if (pendingYLockActivation) {
+              clearTimeout(pendingYLockActivation);
+              pendingYLockActivation = null;
+            }
+          }
+          
+          // Only apply state change after debounce delay
+          const timeSinceStateChange = now - stateChangeTime;
+          if (newInsideHouse !== isInsideHouse && timeSinceStateChange >= STATE_CHANGE_DELAY) {
+            isInsideHouse = newInsideHouse;
+            toggleConstraints(isInsideHouse);
+            stateChangeTime = 0; // Reset timer
+            
+            // If entering house, schedule Y lock activation with delay
+            if (isInsideHouse && currentFloorY !== null) {
+              // Clear any existing pending activation
+              if (pendingYLockActivation) {
+                clearTimeout(pendingYLockActivation);
+              }
+              
+              // Delay Y lock activation to prevent sudden snap
+              // Wait longer to ensure ground-constraint is fully disabled
+              pendingYLockActivation = setTimeout(() => {
+                // Double-check ground-constraint is disabled
+                const groundConstraint = rig.components['ground-constraint'];
+                const isGroundConstraintDisabled = groundConstraint && 
+                  (groundConstraint.data.updateInterval >= 999999 || 
+                   !groundConstraint.tick || 
+                   groundConstraint.originalTick);
+                
+                if (!isGroundConstraintDisabled) {
+                  // Force disable one more time
+                  toggleConstraints(true);
+                }
+                
+                // Wait a bit more for constraints to settle
+                setTimeout(() => {
+                  const expectedY = currentFloorY + 0.1;
+                  const currentPos = rig.getAttribute('position');
+                  const currentY = typeof currentPos === 'string' 
+                    ? parseFloat(currentPos.split(/\s+/)[1]) 
+                    : (currentPos?.y || 0);
+                  
+                  // Only activate if still inside house and position is reasonable
+                  if (isInsideHouse && Math.abs(currentY - expectedY) < 3) {
+                    rig.setAttribute('y-position-lock', {
+                      enabled: true,
+                      targetY: expectedY,
+                      smoothness: 0.08 // Even smoother transition
+                    });
+                    yLockEnabled = true;
+                  }
+                  pendingYLockActivation = null;
+                }, 200); // Additional 200ms delay
+              }, 500); // 500ms initial delay before activating Y lock
+            } else if (!isInsideHouse) {
+              // Immediately disable Y lock when exiting
+              if (yLockEnabled) {
+                rig.setAttribute('y-position-lock', {
+                  enabled: false,
+                  targetY: 0
+                });
+                yLockEnabled = false;
+                currentFloorY = null;
+              }
+              
+              // Clear any pending Y lock activation
+              if (pendingYLockActivation) {
+                clearTimeout(pendingYLockActivation);
+                pendingYLockActivation = null;
+              }
+              
+              // Ensure constraints are re-enabled
+              if (groundConstraintDisabled) {
+                toggleConstraints(false);
+              }
+            }
+          }
+          
+          // Jika di dalam rumah, pastikan constraints tetap disabled (but don't spam)
+          if (isInsideHouse && timeSinceStateChange >= STATE_CHANGE_DELAY) {
+            // Force disable constraints jika belum disabled (only once)
+            if (!groundConstraintDisabled) {
+              toggleConstraints(true);
+            }
+            
+            // Double-check constraints occasionally (every 2 seconds)
+            const constraintCheckInterval = 2000;
+            const timeSinceLastConstraintCheck = now - (lastConstraintCheckTime || 0);
+            if (timeSinceLastConstraintCheck >= constraintCheckInterval) {
+              lastConstraintCheckTime = now;
+              
+              // Double-check ground-constraint masih disabled
+              const groundConstraint = rig.components['ground-constraint'];
+              if (groundConstraint && groundConstraint.data.updateInterval < 999999) {
+                rig.setAttribute('ground-constraint', 'updateInterval', 999999);
+                groundConstraint.data.updateInterval = 999999;
+              }
+              
+              // Double-check navmesh-constraint masih disabled
+              const navmeshConstraint = rig.components['simple-navmesh-constraint'];
+              if (navmeshConstraint && navmeshConstraint.data.fall > 0) {
+                rig.setAttribute('simple-navmesh-constraint', {
+                  navmesh: navmeshConstraint.data.navmesh,
+                  fall: 0,
+                  height: 999,
+                  exclude: navmeshConstraint.data.exclude || ''
+                });
+                navmeshConstraint.data.fall = 0;
+                navmeshConstraint.data.height = 999;
+              }
+            }
+          }
+        }
+        
+        // Use requestAnimationFrame for better performance instead of setInterval
+        let rafId = null;
+        let isRunning = false;
+        
+        function checkLoop() {
+          if (!isRunning) return;
+          performCheck();
+          rafId = requestAnimationFrame(checkLoop);
+        }
+        
+        function startChecking() {
+          if (isRunning) return;
+          isRunning = true;
+          checkLoop();
+        }
+        
+        function stopChecking() {
+          isRunning = false;
+          if (rafId) {
+            cancelAnimationFrame(rafId);
+            rafId = null;
+          }
+          // Clear any pending Y lock activation
+          if (pendingYLockActivation) {
+            clearTimeout(pendingYLockActivation);
+            pendingYLockActivation = null;
+          }
+          // Clear floor event debounce
+          if (floorEventDebounce) {
+            clearTimeout(floorEventDebounce);
+            floorEventDebounce = null;
+          }
+        }
+        
+        // Start checking after scene is loaded
+        const scene = document.querySelector('a-scene');
+        if (scene) {
+          if (scene.hasLoaded) {
+            startChecking();
+          } else {
+            scene.addEventListener('loaded', startChecking, { once: true });
+          }
+        }
+        
+        // Listen untuk player-on-floor event dari collider (throttled and debounced)
+        let lastFloorEventTime = 0;
+        document.addEventListener('player-on-floor', function(event) {
+          const now = performance.now();
+          if (now - lastFloorEventTime < 1000) return; // Throttle to max once per second
+          lastFloorEventTime = now;
+          
+          // Clear existing debounce
+          if (floorEventDebounce) {
+            clearTimeout(floorEventDebounce);
+          }
+          
+          // Debounce floor event handling
+          floorEventDebounce = setTimeout(() => {
+            if (isInsideHouse && currentFloorY !== null) {
+              // Only update if floorY changed significantly
+              const newFloorY = event.detail.floorY;
+              if (Math.abs(newFloorY - currentFloorY) > 0.2) {
+                currentFloorY = newFloorY;
+                const expectedY = currentFloorY + 0.1;
+                
+                // Update Y position lock target smoothly
+                const rig = document.getElementById('rig');
+                if (rig && yLockEnabled) {
+                  rig.setAttribute('y-position-lock', {
+                    enabled: true,
+                    targetY: expectedY,
+                    smoothness: 0.1
+                  });
+                }
+              }
+            }
+            floorEventDebounce = null;
+          }, 200); // 200ms debounce
+        });
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', stopChecking);
+      })();
+    </script>
+  </body>
+</html>

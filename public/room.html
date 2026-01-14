@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nusa-Dwipa - Pilih Ruangan</title>
+    <meta name="description" content="Buat atau gabung ruangan untuk bermain Nusa-Dwipa">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/assets/image/tittle.png" />
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 50%, #1d4ed8 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            transition: all 0.3s ease;
+            border: none;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.4);
+        }
+        .btn-secondary {
+            background: white;
+            border: 2px solid #3b82f6;
+            color: #3b82f6;
+            transition: all 0.3s ease;
+        }
+        .btn-secondary:hover {
+            background: #3b82f6;
+            color: white;
+        }
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+            transition: all 0.3s ease;
+            border: none;
+        }
+        .btn-danger:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+        }
+        .btn-success {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            transition: all 0.3s ease;
+            border: none;
+        }
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
+        }
+        .feedback {
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            font-weight: 500;
+            animation: slideDown 0.3s ease;
+        }
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .feedback.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #6ee7b7;
+        }
+        .feedback.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+        .feedback.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #93c5fd;
+        }
+        .squad-card {
+            border: 2px solid #e5e7eb;
+            transition: all 0.3s ease;
+            min-height: 200px;
+        }
+        .squad-card:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+        }
+        .squad-card.active {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+        .player-item {
+            transition: all 0.2s ease;
+            border-radius: 8px;
+        }
+        .player-item:hover {
+            background: #f3f4f6;
+        }
+        .room-code-display {
+            font-family: 'Courier New', monospace;
+            letter-spacing: 0.2em;
+        }
+        .copy-btn {
+            transition: all 0.2s ease;
+            border: none;
+        }
+        .copy-btn:hover {
+            transform: scale(1.05);
+        }
+        .copy-btn.copied {
+            background: #10b981 !important;
+        }
+        /* Form transitions */
+        #mode-selection,
+        #create-form,
+        #join-form,
+        #room-lobby {
+            animation: fadeIn 0.3s ease;
+        }
+        #mode-selection.hidden,
+        #create-form.hidden,
+        #join-form.hidden,
+        #room-lobby.hidden {
+            display: none !important;
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        /* Input styling */
+        input[type="text"] {
+            transition: all 0.2s ease;
+            font-size: 15px;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+        /* Button styling */
+        button {
+            cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        /* Squad label styling */
+        .squad-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #64748b;
+            margin-bottom: 10px;
+            display: block;
+        }
+        /* Empty slot styling */
+        .empty-slot {
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="flex items-center justify-center min-h-screen">
+        <div class="w-full max-w-6xl px-4">
+            <div class="card p-6 sm:p-8">
+            <!-- Header -->
+            <div class="text-center mb-10">
+                <h1 class="text-4xl sm:text-5xl font-bold text-blue-700 mb-3">Nusa-Dwipa</h1>
+                <p class="text-slate-600 text-lg" id="header-subtitle">Pilih untuk membuat atau bergabung ke ruangan</p>
+            </div>
+
+            <!-- Feedback Message -->
+            <div id="feedback" class="feedback hidden"></div>
+
+            <!-- Mode Selection (Default) -->
+            <div id="mode-selection" class="space-y-6">
+                <div class="grid gap-6 sm:grid-cols-2">
+                    <button id="btn-create" class="btn-primary text-white p-8 rounded-2xl text-left transition-all">
+                        <h3 class="text-xl font-bold mb-3">Buat Ruangan</h3>
+                        <p class="text-sm opacity-90 leading-relaxed">Jadilah host dan pimpin petualangan budaya bersama temanmu.</p>
+                    </button>
+                    <button id="btn-join" class="btn-secondary p-8 rounded-2xl text-left transition-all">
+                        <h3 class="text-xl font-bold mb-3">Gabung Ruangan</h3>
+                        <p class="text-sm leading-relaxed">Masukkan kode ruangan dari host dan pilih squad.</p>
+                    </button>
+                </div>
+                <div class="pt-4">
+                    <button id="btn-solo" class="w-full btn-success text-white p-8 rounded-2xl text-left transition-all">
+                        <h3 class="text-xl font-bold mb-3">Mode Solo</h3>
+                        <p class="text-sm opacity-90 leading-relaxed">Bermain sendiri dan jelajahi petualangan budaya Nusantara tanpa perlu ruangan.</p>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Create Room Form -->
+            <div id="create-form" class="hidden">
+                <div class="flex items-center justify-between mb-8 pb-4 border-b border-slate-200">
+                    <h2 class="text-2xl font-bold text-blue-700">Buat Ruangan Baru</h2>
+                    <button id="btn-back-create" class="text-slate-600 hover:text-slate-800 font-medium px-4 py-2 rounded-lg hover:bg-slate-100 transition">
+                        ← Kembali
+                    </button>
+                </div>
+                <div class="space-y-6 pt-2">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-3">Nama Ruangan</label>
+                        <input type="text" id="room-name" class="w-full px-4 py-3.5 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-700 transition" placeholder="Misal: Petualangan Nusantara" maxlength="50" value="Petualangan Nusantara">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-4">Nama Squad</label>
+                        <div class="space-y-5">
+                            <div>
+                                <label class="squad-label">Squad 1</label>
+                                <input type="text" id="squad-1" class="w-full px-4 py-3.5 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-700 transition mt-1" placeholder="Nama Squad 1" value="Squad Merdeka">
+                            </div>
+                            <div>
+                                <label class="squad-label">Squad 2</label>
+                                <input type="text" id="squad-2" class="w-full px-4 py-3.5 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-700 transition mt-1" placeholder="Nama Squad 2" value="Squad Bahari">
+                            </div>
+                            <div>
+                                <label class="squad-label">Squad 3</label>
+                                <input type="text" id="squad-3" class="w-full px-4 py-3.5 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-700 transition mt-1" placeholder="Nama Squad 3" value="Squad Cendrawasih">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pt-4">
+                        <button id="btn-submit-create" class="btn-primary text-white w-full py-4 rounded-xl font-bold text-lg shadow-lg">
+                            Buat Ruangan
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Join Room Form -->
+            <div id="join-form" class="hidden">
+                <div class="flex items-center justify-between mb-8 pb-4 border-b border-slate-200">
+                    <h2 class="text-2xl font-bold text-blue-700">Gabung Ruangan</h2>
+                    <button id="btn-back-join" class="text-slate-600 hover:text-slate-800 font-medium px-4 py-2 rounded-lg hover:bg-slate-100 transition">
+                        ← Kembali
+                    </button>
+                </div>
+                <div class="space-y-6 pt-2">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-3">Kode Ruangan</label>
+                        <input type="text" id="room-code" class="w-full px-4 py-5 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center text-4xl font-bold tracking-widest uppercase text-slate-700 transition" placeholder="ABCD" maxlength="4">
+                        <p class="text-xs text-slate-500 mt-3 text-center">Masukkan 4 huruf kode ruangan</p>
+                    </div>
+                    <div class="pt-4">
+                        <button id="btn-submit-join" class="btn-primary text-white w-full py-4 rounded-xl font-bold text-lg shadow-lg">
+                            Gabung Ruangan
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Room Lobby View -->
+            <div id="room-lobby" class="hidden">
+                <!-- Room Header -->
+                <div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-6 text-white mb-6">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div class="flex-1">
+                            <h2 class="text-2xl font-bold mb-3" id="room-name-display">Ruangan</h2>
+                            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                                <span class="text-sm opacity-90 font-medium">Kode Ruangan:</span>
+                                <div class="flex items-center gap-2">
+                                    <span class="room-code-display text-2xl font-bold bg-white/20 px-5 py-2 rounded-lg" id="room-code-display">----</span>
+                                    <button id="btn-copy-code" class="copy-btn bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition">
+                                        <span id="copy-text">📋 Salin</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 w-full sm:w-auto">
+                            <button id="btn-leave-room" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg text-sm font-semibold transition flex-1 sm:flex-none">
+                                Keluar
+                            </button>
+                            <button id="btn-start-game" class="btn-success px-6 py-2 rounded-lg text-sm font-semibold hidden">
+                                ▶ Mulai Game
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Squads Display -->
+                <div class="grid gap-4 sm:grid-cols-3" id="squads-container">
+                    <!-- Squads will be rendered here -->
+                </div>
+            </div>
+
+            <!-- Loading Indicator -->
+            <div id="loading" class="hidden text-center py-8">
+                <div class="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+                <p class="mt-3 text-slate-600 font-medium">Memproses...</p>
+            </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getDatabase, ref, set, get, runTransaction, onValue, off, update, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, Timestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBA4qQj_Mg0Tanfe8nQNLqL33Rtii0ZhqA",
+            authDomain: "nusa-dwipa.firebaseapp.com",
+            databaseURL: "https://nusa-dwipa-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "nusa-dwipa",
+            storageBucket: "nusa-dwipa.firebasestorage.app",
+            messagingSenderId: "231878445619",
+            appId: "1:231878445619:web:ea7b04746f23afd73e7146",
+            measurementId: "G-MZ67EDBKF5"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        const firestore = getFirestore(app);
+
+        let currentRoomCode = null;
+        let currentUserId = null;
+        let isHost = false;
+        let roomUnsubscribe = null;
+
+        // Check authentication
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'auth.html';
+            } else {
+                currentUserId = user.uid;
+                // Load user data
+                getDoc(doc(firestore, 'users', user.uid)).then((docSnap) => {
+                    if (docSnap.exists()) {
+                        const userData = docSnap.data();
+                        localStorage.setItem('userUsername', userData.username);
+                        localStorage.setItem('userEmail', user.email);
+                        localStorage.setItem('userId', user.uid);
+                    }
+                });
+                
+                // Check if already in a room
+                const activeRoomCode = localStorage.getItem('activeRoomCode');
+                if (activeRoomCode) {
+                    joinRoomLobby(activeRoomCode);
+                }
+            }
+        });
+
+        // UI Elements
+        const modeSelection = document.getElementById('mode-selection');
+        const createForm = document.getElementById('create-form');
+        const joinForm = document.getElementById('join-form');
+        const roomLobby = document.getElementById('room-lobby');
+        const feedback = document.getElementById('feedback');
+        const loading = document.getElementById('loading');
+        const headerSubtitle = document.getElementById('header-subtitle');
+
+        // Buttons
+        const btnCreate = document.getElementById('btn-create');
+        const btnJoin = document.getElementById('btn-join');
+        const btnSolo = document.getElementById('btn-solo');
+        const btnBackCreate = document.getElementById('btn-back-create');
+        const btnBackJoin = document.getElementById('btn-back-join');
+        const btnSubmitCreate = document.getElementById('btn-submit-create');
+        const btnSubmitJoin = document.getElementById('btn-submit-join');
+        const btnCopyCode = document.getElementById('btn-copy-code');
+        const btnLeaveRoom = document.getElementById('btn-leave-room');
+        const btnStartGame = document.getElementById('btn-start-game');
+
+        // Show feedback
+        function showFeedback(message, type = 'info') {
+            feedback.textContent = message;
+            feedback.className = `feedback ${type}`;
+            feedback.classList.remove('hidden');
+            setTimeout(() => {
+                feedback.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Show loading
+        function setLoading(isLoading) {
+            if (isLoading) {
+                loading.classList.remove('hidden');
+                if (btnSubmitCreate) btnSubmitCreate.disabled = true;
+                if (btnSubmitJoin) btnSubmitJoin.disabled = true;
+            } else {
+                loading.classList.add('hidden');
+                if (btnSubmitCreate) btnSubmitCreate.disabled = false;
+                if (btnSubmitJoin) btnSubmitJoin.disabled = false;
+            }
+        }
+
+        // Generate room code
+        function generateRoomCode() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            let code = '';
+            for (let i = 0; i < 4; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+        }
+
+        // Create room
+        async function createRoom() {
+            const roomName = document.getElementById('room-name').value.trim() || 'Petualangan Nusantara';
+            const squad1 = document.getElementById('squad-1').value.trim() || 'Squad Merdeka';
+            const squad2 = document.getElementById('squad-2').value.trim() || 'Squad Bahari';
+            const squad3 = document.getElementById('squad-3').value.trim() || 'Squad Cendrawasih';
+
+            const user = auth.currentUser;
+            if (!user) {
+                showFeedback('Silakan login terlebih dahulu', 'error');
+                return;
+            }
+
+            setLoading(true);
+
+            try {
+                let roomCode = generateRoomCode();
+                let attempts = 0;
+                
+                // Check if room code exists
+                while (attempts < 10) {
+                    const roomRef = ref(db, `rooms/${roomCode}`);
+                    const snapshot = await get(roomRef);
+                    if (!snapshot.exists()) {
+                        break;
+                    }
+                    roomCode = generateRoomCode();
+                    attempts++;
+                }
+
+                if (attempts >= 10) {
+                    throw new Error('Gagal membuat kode ruangan. Coba lagi.');
+                }
+
+                const userId = user.uid;
+                const userName = localStorage.getItem('userUsername') || 'Player';
+                const now = Date.now();
+
+                const roomData = {
+                    roomCode,
+                    roomName,
+                    hostId: userId,
+                    hostName: userName,
+                    hostSquadId: 'squad1',
+                    status: 'waiting',
+                    createdAt: now,
+                    lastUpdatedAt: now,
+                    squads: {
+                        squad1: {
+                            id: 'squad1',
+                            name: squad1,
+                            capacity: 3,
+                            score: 0,
+                            status: 'waiting',
+                            members: {
+                                [userId]: {
+                                    userId,
+                                    name: userName,
+                                    squadId: 'squad1',
+                                    joinedAt: now,
+                                    isHost: true
+                                }
+                            }
+                        },
+                        squad2: {
+                            id: 'squad2',
+                            name: squad2,
+                            capacity: 3,
+                            score: 0,
+                            status: 'waiting',
+                            members: {}
+                        },
+                        squad3: {
+                            id: 'squad3',
+                            name: squad3,
+                            capacity: 3,
+                            score: 0,
+                            status: 'waiting',
+                            members: {}
+                        }
+                    },
+                    players: {
+                        [userId]: {
+                            userId,
+                            name: userName,
+                            squadId: 'squad1',
+                            joinedAt: now,
+                            isHost: true
+                        }
+                    }
+                };
+
+                await set(ref(db, `rooms/${roomCode}`), roomData);
+                localStorage.setItem('activeRoomCode', roomCode);
+                
+                // Show room lobby
+                joinRoomLobby(roomCode);
+
+            } catch (error) {
+                console.error('Create room error:', error);
+                showFeedback(error.message || 'Gagal membuat ruangan. Coba lagi.', 'error');
+                setLoading(false);
+            }
+        }
+
+        // Join room
+        async function joinRoom() {
+            const roomCode = document.getElementById('room-code').value.trim().toUpperCase();
+            
+            if (!roomCode || roomCode.length !== 4) {
+                showFeedback('Masukkan kode ruangan yang valid (4 huruf)', 'error');
+                return;
+            }
+
+            const user = auth.currentUser;
+            if (!user) {
+                showFeedback('Silakan login terlebih dahulu', 'error');
+                return;
+            }
+
+            setLoading(true);
+
+            try {
+                const roomRef = ref(db, `rooms/${roomCode}`);
+                const snapshot = await get(roomRef);
+
+                if (!snapshot.exists()) {
+                    showFeedback('Ruangan tidak ditemukan', 'error');
+                    setLoading(false);
+                    return;
+                }
+
+                const roomData = snapshot.val();
+                
+                // Check if room is full or already started
+                if (roomData.status === 'in-progress' || roomData.status === 'completed') {
+                    showFeedback('Ruangan sudah dimulai atau selesai', 'error');
+                    setLoading(false);
+                    return;
+                }
+
+                // Check if already in room
+                if (roomData.players && roomData.players[user.uid]) {
+                    // Already in room, just show lobby
+                    joinRoomLobby(roomCode);
+                    return;
+                }
+
+                // Find available squad
+                const userId = user.uid;
+                const userName = localStorage.getItem('userUsername') || 'Player';
+                let targetSquadId = null;
+
+                for (const [squadId, squad] of Object.entries(roomData.squads)) {
+                    const members = squad.members || {};
+                    if (Object.keys(members).length < squad.capacity) {
+                        targetSquadId = squadId;
+                        break;
+                    }
+                }
+
+                if (!targetSquadId) {
+                    showFeedback('Semua squad sudah penuh', 'error');
+                    setLoading(false);
+                    return;
+                }
+
+                // Add player to room
+                const now = Date.now();
+                await runTransaction(ref(db, `rooms/${roomCode}/players/${userId}`), (current) => {
+                    if (current === null) {
+                        return {
+                            userId,
+                            name: userName,
+                            squadId: targetSquadId,
+                            joinedAt: now,
+                            isHost: false
+                        };
+                    }
+                    return current;
+                });
+
+                // Add to squad
+                await runTransaction(ref(db, `rooms/${roomCode}/squads/${targetSquadId}/members/${userId}`), (current) => {
+                    if (current === null) {
+                        return {
+                            userId,
+                            name: userName,
+                            squadId: targetSquadId,
+                            joinedAt: now,
+                            isHost: false
+                        };
+                    }
+                    return current;
+                });
+
+                // Update last updated
+                await set(ref(db, `rooms/${roomCode}/lastUpdatedAt`), now);
+
+                localStorage.setItem('activeRoomCode', roomCode);
+                
+                // Show room lobby
+                joinRoomLobby(roomCode);
+
+            } catch (error) {
+                console.error('Join room error:', error);
+                showFeedback(error.message || 'Gagal bergabung ke ruangan. Coba lagi.', 'error');
+                setLoading(false);
+            }
+        }
+
+        // Join room lobby (show room view)
+        function joinRoomLobby(roomCode) {
+            currentRoomCode = roomCode;
+            
+            // Hide other views
+            modeSelection.classList.add('hidden');
+            createForm.classList.add('hidden');
+            joinForm.classList.add('hidden');
+            roomLobby.classList.remove('hidden');
+            headerSubtitle.textContent = 'Ruangan Lobby';
+
+            // Subscribe to room changes
+            if (roomUnsubscribe) {
+                roomUnsubscribe();
+            }
+
+            const roomRef = ref(db, `rooms/${roomCode}`);
+            roomUnsubscribe = onValue(roomRef, (snapshot) => {
+                if (!snapshot.exists()) {
+                    showFeedback('Ruangan tidak ditemukan', 'error');
+                    leaveRoom();
+                    return;
+                }
+
+                const roomData = snapshot.val();
+                updateRoomDisplay(roomData);
+            });
+        }
+
+        // Update room display
+        function updateRoomDisplay(roomData) {
+            // Update room name and code
+            document.getElementById('room-name-display').textContent = roomData.roomName || 'Ruangan';
+            document.getElementById('room-code-display').textContent = roomData.roomCode || '----';
+
+            // Check if user is host
+            const user = auth.currentUser;
+            isHost = user && roomData.hostId === user.uid;
+
+            // Show/hide start game button
+            if (isHost && roomData.status === 'waiting') {
+                btnStartGame.classList.remove('hidden');
+            } else {
+                btnStartGame.classList.add('hidden');
+            }
+
+            // Render squads
+            const squadsContainer = document.getElementById('squads-container');
+            squadsContainer.innerHTML = '';
+
+            const squadOrder = ['squad1', 'squad2', 'squad3'];
+            const userPlayer = roomData.players && roomData.players[currentUserId];
+
+            squadOrder.forEach((squadId, index) => {
+                const squad = roomData.squads[squadId];
+                if (!squad) return;
+
+                const squadNumber = index + 1;
+                const members = squad.members || {};
+                const memberCount = Object.keys(members).length;
+                const isUserInSquad = userPlayer && userPlayer.squadId === squadId;
+                const canJoin = memberCount < squad.capacity && !isUserInSquad;
+
+                const squadCard = document.createElement('div');
+                squadCard.className = `squad-card rounded-xl p-5 ${isUserInSquad ? 'active' : ''}`;
+                squadCard.innerHTML = `
+                    <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-200">
+                        <h3 class="text-lg font-bold text-blue-700">
+                            Squad ${squadNumber}
+                        </h3>
+                        <span class="text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-1 rounded-full">${memberCount}/${squad.capacity}</span>
+                    </div>
+                    <div class="mb-1">
+                        <p class="text-sm font-semibold text-slate-600 mb-3">${squad.name || `Squad ${squadNumber}`}</p>
+                    </div>
+                    <div class="space-y-2 mb-4 min-h-[120px]" id="squad-${squadId}-members">
+                        ${Object.entries(members).map(([playerId, player]) => `
+                            <div class="player-item flex items-center justify-between p-3 rounded-lg bg-slate-50">
+                                <div class="flex items-center gap-2 flex-1 min-w-0">
+                                    <span class="font-medium text-slate-700 truncate">${player.name || 'Player'}</span>
+                                    ${player.isHost ? '<span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-semibold whitespace-nowrap">Host</span>' : ''}
+                                </div>
+                                ${isHost && !player.isHost ? `
+                                    <button onclick="kickPlayer('${playerId}', '${squadId}')" class="text-xs text-red-600 hover:text-red-800 font-semibold px-2 py-1 hover:bg-red-50 rounded transition whitespace-nowrap ml-2">
+                                        ✕
+                                    </button>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                        ${Array(squad.capacity - memberCount).fill(0).map(() => `
+                            <div class="empty-slot p-3 rounded-lg border-2 border-dashed border-slate-300 text-center text-xs text-slate-400">
+                                Slot Kosong
+                            </div>
+                        `).join('')}
+                    </div>
+                    ${canJoin ? `
+                        <button onclick="switchSquad('${squadId}')" class="w-full py-2.5 px-4 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-sm font-semibold transition">
+                            Pindah ke Squad ${squadNumber}
+                        </button>
+                    ` : isUserInSquad ? `
+                        <div class="w-full py-2.5 px-4 bg-green-100 text-green-700 rounded-lg text-sm font-semibold text-center">
+                            ✓ Squad Anda
+                        </div>
+                    ` : `
+                        <div class="w-full py-2.5 px-4 bg-slate-100 text-slate-500 rounded-lg text-sm font-semibold text-center">
+                            Penuh
+                        </div>
+                    `}
+                `;
+                squadsContainer.appendChild(squadCard);
+            });
+        }
+
+        // Switch squad
+        window.switchSquad = async function(targetSquadId) {
+            if (!currentRoomCode || !currentUserId) return;
+
+            try {
+                const roomRef = ref(db, `rooms/${currentRoomCode}`);
+                const snapshot = await get(roomRef);
+                if (!snapshot.exists()) return;
+
+                const roomData = snapshot.val();
+                const userPlayer = roomData.players[currentUserId];
+                if (!userPlayer) return;
+
+                const oldSquadId = userPlayer.squadId;
+                if (oldSquadId === targetSquadId) {
+                    showFeedback('Anda sudah berada di squad ini', 'info');
+                    return;
+                }
+
+                // Check if target squad has space
+                const targetSquad = roomData.squads[targetSquadId];
+                if (!targetSquad) return;
+                const targetMembers = targetSquad.members || {};
+                if (Object.keys(targetMembers).length >= targetSquad.capacity) {
+                    showFeedback('Squad ini sudah penuh', 'error');
+                    return;
+                }
+
+                // Remove from old squad
+                await remove(ref(db, `rooms/${currentRoomCode}/squads/${oldSquadId}/members/${currentUserId}`));
+
+                // Add to new squad
+                await set(ref(db, `rooms/${currentRoomCode}/squads/${targetSquadId}/members/${currentUserId}`), {
+                    userId: currentUserId,
+                    name: userPlayer.name,
+                    squadId: targetSquadId,
+                    joinedAt: userPlayer.joinedAt,
+                    isHost: userPlayer.isHost
+                });
+
+                // Update player squad
+                await update(ref(db, `rooms/${currentRoomCode}/players/${currentUserId}`), {
+                    squadId: targetSquadId
+                });
+
+                showFeedback(`Berhasil pindah ke ${targetSquad.name}`, 'success');
+            } catch (error) {
+                console.error('Switch squad error:', error);
+                showFeedback('Gagal pindah squad', 'error');
+            }
+        };
+
+        // Kick player
+        window.kickPlayer = async function(playerId, squadId) {
+            if (!isHost || !currentRoomCode) return;
+            if (playerId === currentUserId) {
+                showFeedback('Anda tidak bisa kick diri sendiri', 'error');
+                return;
+            }
+
+            if (!confirm('Yakin ingin mengeluarkan pemain ini?')) return;
+
+            try {
+                // Remove from squad
+                await remove(ref(db, `rooms/${currentRoomCode}/squads/${squadId}/members/${playerId}`));
+                // Remove from players
+                await remove(ref(db, `rooms/${currentRoomCode}/players/${playerId}`));
+                showFeedback('Pemain berhasil dikeluarkan', 'success');
+            } catch (error) {
+                console.error('Kick player error:', error);
+                showFeedback('Gagal mengeluarkan pemain', 'error');
+            }
+        };
+
+        // Copy room code
+        btnCopyCode.addEventListener('click', async () => {
+            if (!currentRoomCode) return;
+            
+            try {
+                await navigator.clipboard.writeText(currentRoomCode);
+                const copyText = document.getElementById('copy-text');
+                copyText.textContent = '✓ Tersalin!';
+                btnCopyCode.classList.add('copied');
+                
+                setTimeout(() => {
+                    copyText.textContent = '📋 Salin';
+                    btnCopyCode.classList.remove('copied');
+                }, 2000);
+            } catch (error) {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = currentRoomCode;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showFeedback('Kode ruangan disalin!', 'success');
+            }
+        });
+
+        // Leave room
+        btnLeaveRoom.addEventListener('click', () => {
+            if (confirm('Yakin ingin keluar dari ruangan?')) {
+                leaveRoom();
+            }
+        });
+
+        // Leave room function
+        async function leaveRoom() {
+            if (roomUnsubscribe) {
+                roomUnsubscribe();
+                roomUnsubscribe = null;
+            }
+
+            if (currentRoomCode && currentUserId) {
+                try {
+                    const roomRef = ref(db, `rooms/${currentRoomCode}`);
+                    const snapshot = await get(roomRef);
+                    if (snapshot.exists()) {
+                        const roomData = snapshot.val();
+                        const userPlayer = roomData.players[currentUserId];
+                        
+                        if (userPlayer) {
+                            // Remove from squad
+                            await remove(ref(db, `rooms/${currentRoomCode}/squads/${userPlayer.squadId}/members/${currentUserId}`));
+                            // Remove from players
+                            await remove(ref(db, `rooms/${currentRoomCode}/players/${currentUserId}`));
+                        }
+                    }
+                } catch (error) {
+                    console.error('Leave room error:', error);
+                }
+            }
+
+            localStorage.removeItem('activeRoomCode');
+            currentRoomCode = null;
+            isHost = false;
+
+            // Show mode selection
+            roomLobby.classList.add('hidden');
+            modeSelection.classList.remove('hidden');
+            headerSubtitle.textContent = 'Pilih untuk membuat atau bergabung ke ruangan';
+        }
+
+        // Start game
+        btnStartGame.addEventListener('click', async () => {
+            if (!isHost || !currentRoomCode) return;
+
+            if (!confirm('Mulai permainan? Semua pemain akan diarahkan ke lobby.')) return;
+
+            try {
+                // Update room status to countdown
+                await update(ref(db, `rooms/${currentRoomCode}`), {
+                    status: 'countdown',
+                    countdown: {
+                        startedAt: Date.now(),
+                        endsAt: Date.now() + 10000 // 10 seconds
+                    }
+                });
+
+                // Redirect to lobby after a short delay
+                setTimeout(() => {
+                    window.location.href = `lobby.html?room=${currentRoomCode}`;
+                }, 500);
+            } catch (error) {
+                console.error('Start game error:', error);
+                showFeedback('Gagal memulai permainan', 'error');
+            }
+        });
+
+        // Event listeners
+        btnCreate.addEventListener('click', () => {
+            showFeedback('Sistem sedang ada masalah dengan mode Buat Ruangan. Saat ini hanya mode Solo yang tersedia.', 'error');
+            // Don't show create form
+            // modeSelection.classList.add('hidden');
+            // createForm.classList.remove('hidden');
+        });
+
+        btnJoin.addEventListener('click', () => {
+            showFeedback('Sistem sedang ada masalah dengan mode Gabung Ruangan. Saat ini hanya mode Solo yang tersedia.', 'error');
+            // Don't show join form
+            // modeSelection.classList.add('hidden');
+            // joinForm.classList.remove('hidden');
+        });
+
+        // Solo mode - directly redirect to game.html
+        btnSolo.addEventListener('click', () => {
+            console.log('[Room] Solo mode selected, redirecting to game...');
+            // Set flag for solo mode before redirect
+            window.__soloMode = true;
+            window.location.href = 'game.html';
+        });
+
+        btnBackCreate.addEventListener('click', () => {
+            createForm.classList.add('hidden');
+            modeSelection.classList.remove('hidden');
+        });
+
+        btnBackJoin.addEventListener('click', () => {
+            joinForm.classList.add('hidden');
+            modeSelection.classList.remove('hidden');
+        });
+
+        btnSubmitCreate.addEventListener('click', createRoom);
+        btnSubmitJoin.addEventListener('click', joinRoom);
+
+        // Enter key handlers
+        document.getElementById('room-name').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') createRoom();
+        });
+        document.getElementById('room-code').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') joinRoom();
+        });
+    </script>
+</body>
+</html>
